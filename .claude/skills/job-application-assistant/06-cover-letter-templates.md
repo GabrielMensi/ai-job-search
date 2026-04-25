@@ -5,8 +5,51 @@
 Cover letters use a custom LaTeX document class (`cover.cls`) with Lato/Raleway fonts.
 
 **Output file:** `cover_letters/cover_<company>_<role>.tex`
-**Compile with:** XeLaTeX (not pdflatex)
+**Compile with:** XeLaTeX (cover.cls requires fontspec)
 **Font directory:** `cover_letters/OpenFonts/fonts/`
+
+### Compile command
+
+```bash
+cd cover_letters && xelatex -interaction=nonstopmode cover_<company>_<role>.tex
+```
+
+Expected output: `Output written on cover_<company>_<role>.pdf (1 page, ...)`. Any page count other than 1 is a failure that must be fixed before presenting to the user.
+
+## Compile-and-Inspect Loop (MANDATORY)
+
+After writing the cover letter and before presenting to the user, always compile and visually inspect the PDF. Iterate until the layout is clean:
+
+1. Run `xelatex -interaction=nonstopmode cover_<company>_<role>.tex`
+2. Confirm page count is exactly 1 and compile succeeded
+3. Read the PDF via the Read tool and visually check: signature fits at the bottom, no text cut off, bullet font matches body
+
+### Known template pitfall: itemize inside `\lettercontent{}`
+
+The `\lettercontent{}` macro appends `\\` to its argument. This breaks when the argument ends in `\end{itemize}` because `\\` has no line to break after the environment closes, producing `! LaTeX Error: There's no line here to end.` and no PDF output.
+
+**Wrong (breaks compile):**
+```latex
+\lettercontent{Here is how my experience maps:
+\begin{itemize}
+    \item ...
+\end{itemize}}
+```
+
+**Correct — close `\lettercontent{}` before the list and wrap the list in the matching Raleway-Medium font so typography stays consistent:**
+```latex
+\lettercontent{Here is how my experience maps:}
+
+{\raggedright\fontspec[Path = OpenFonts/fonts/raleway/]{Raleway-Medium}\fontsize{11pt}{13pt}\selectfont
+\begin{itemize}
+    \item ...
+\end{itemize}\par}
+\vspace{6pt}
+
+\lettercontent{[next paragraph]}
+```
+
+The font wrapper is mandatory — if you just move `\begin{itemize}` outside `\lettercontent{}` without the `\fontspec` block, bullets render in the default body font (Lato) and visually mismatch the rest of the letter.
 
 ## Document Structure
 
@@ -92,7 +135,7 @@ Cover letters use a custom LaTeX document class (`cover.cls`) with Lato/Raleway 
 - Use `\vspace{.5cm}` between major sections for readability (only if space permits)
 
 ### Bullet Lists
-- Use `\begin{itemize}...\end{itemize}` inside a `\lettercontent{}` block
+- Place `\begin{itemize}...\end{itemize}` **outside** a `\lettercontent{}` block (see "Known template pitfall" above), wrapped in the matching Raleway-Medium `\fontspec` so the bullet font matches the body
 - 3-5 bullets is ideal
 - Start each bullet with bold label or action verb
 - Use `\textbf{Label:}` for category-style bullets
