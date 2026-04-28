@@ -25,6 +25,13 @@ Expected output: `Output written on main_<company>.pdf (2 pages, ...)`. Any page
 \moderncvstyle{banking}
 \moderncvcolor{blue}
 
+% Force both first and last name AND section headings to render in moderncv
+% blue (color1). Default banking on lualatex+MiKTeX leaves these black, which
+% looks inconsistent with the rest of the blue accent scheme.
+\renewcommand*{\firstnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
+\renewcommand*{\lastnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
+\renewcommand*{\sectionstyle}[1]{{\sectionfont\color{color1}#1}}
+
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
 \hypersetup{
@@ -58,6 +65,36 @@ Expected output: `Output written on main_<company>.pdf (2 pages, ...)`. Any page
 
 \end{document}
 ```
+
+### Color overrides
+
+The three `\renewcommand*` lines in the preamble are required on lualatex+MiKTeX. Without them the firstname, lastname, and section headings render in black even though `\moderncvcolor{blue}` is set, which looks inconsistent with the rest of the blue accent scheme (links, bullet markers, contact icons). The override forces all three to use `color1` (moderncv's accent colour, which becomes blue under `\moderncvcolor{blue}`). Both names render bold; if you prefer the firstname in regular weight, change the firstnamestyle override from `\bfseries` to `\mdseries`. Don't drop the override - on most modern installs the defaults render visibly wrong.
+
+### Spacing inside itemize lists (important)
+
+**Do not place `\vspace{...}` between `\item` entries in an `itemize` list.** Even though the source looks symmetric, this pattern occasionally produces a noticeably oversized gap before a single item: the inter-item `\vspace` creates a paragraph break that interacts unpredictably with the list's internal `\itemsep`, so LaTeX renders one of the gaps wider than the rest. Remove the inter-item `\vspace` and let `itemize` use its native uniform spacing.
+
+```latex
+% WRONG - intermittently produces an oversized gap before one bullet
+\begin{itemize}
+\item \textbf{Foo}: ...
+\vspace{1pt}
+\item \textbf{Bar}: ...
+\vspace{1pt}
+\item \textbf{Baz}: ...
+\end{itemize}
+
+% RIGHT - uniform spacing using the list's native itemsep
+\begin{itemize}
+\item \textbf{Foo}: ...
+\item \textbf{Bar}: ...
+\item \textbf{Baz}: ...
+\end{itemize}
+```
+
+Two related patterns are fine and should be kept:
+- `\vspace{1pt}` immediately after `\section{...}` (between section heading and first item) - this is between the heading and the list, not between list items.
+- `\vspace{3pt}` between top-level `\cventry` blocks in Professional Experience or Education - this gives breathing room between roles and renders consistently.
 
 ## Section-by-Section Tailoring
 

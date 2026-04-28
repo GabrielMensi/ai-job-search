@@ -3,11 +3,19 @@
 %% Use as a master reference when tailoring role-specific CVs.
 %%
 %% SETUP: Run /setup to populate this with your actual information.
-%% Compile with: pdflatex main_example.tex
+%% Compile with: lualatex main_example.tex
+%% (pdflatex often fails on modern MiKTeX with fontawesome5 font-expansion errors.)
 
 \documentclass[11pt,a4paper,sans]{moderncv}
 \moderncvstyle{banking}
 \moderncvcolor{blue}
+
+% Force both first and last name AND section headings to render in moderncv
+% blue (color1). Default banking on lualatex+MiKTeX leaves these black, which
+% looks inconsistent with the rest of the blue accent scheme.
+\renewcommand*{\firstnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
+\renewcommand*{\lastnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
+\renewcommand*{\sectionstyle}[1]{{\sectionfont\color{color1}#1}}
 
 \usepackage[utf8]{inputenc}
 \usepackage{hyperref}
@@ -49,16 +57,12 @@
 \begin{itemize}
 
 \item \textbf{[Skill Category 1]}: [Specific skills, frameworks, tools. Be concrete.]
-\vspace{1pt}
 
 \item \textbf{[Skill Category 2]}: [Specific skills, frameworks, tools.]
-\vspace{1pt}
 
 \item \textbf{[Skill Category 3]}: [Specific skills, frameworks, tools.]
-\vspace{1pt}
 
 \item \textbf{[Skill Category 4]}: [Domain expertise, methods, approaches.]
-\vspace{1pt}
 
 \item \textbf{[Skill Category 5]}: [Tools, platforms, software.]
 
@@ -76,11 +80,8 @@
 \item{\cventry{[YYYY--Present]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
 \begin{itemize}
     \item [Achievement or responsibility 1 - be specific, use numbers where possible]
-    \vspace{1pt}
     \item [Achievement or responsibility 2]
-    \vspace{1pt}
     \item [Achievement or responsibility 3]
-    \vspace{1pt}
     \item [Achievement or responsibility 4]
 \end{itemize}}}
 
@@ -90,9 +91,7 @@
 \item{\cventry{[YYYY--YYYY]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
 \begin{itemize}
     \item [Achievement or responsibility 1]
-    \vspace{1pt}
     \item [Achievement or responsibility 2]
-    \vspace{1pt}
     \item [Achievement or responsibility 3]
 \end{itemize}}}
 
@@ -102,7 +101,6 @@
 \item{\cventry{[YYYY--YYYY]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
 \begin{itemize}
     \item [Achievement or responsibility 1]
-    \vspace{1pt}
     \item [Achievement or responsibility 2]
 \end{itemize}}}
 
