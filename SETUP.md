@@ -143,7 +143,7 @@ After `/apply` creates the LaTeX files:
 
 ```bash
 # Compile CV
-cd cv && pdflatex main_<company>.tex && cd ..
+cd cv && lualatex main_<company>.tex && cd ..
 
 # Compile cover letter
 cd cover_letters && xelatex cover_<company>_<role>.tex && cd ..
@@ -158,7 +158,7 @@ This is expected if you haven't set up salary benchmarking. The `/apply` workflo
 Make sure Bun is installed and you ran `bun install` in each CLI directory. The tools require network access to fetch job listings.
 
 ### LaTeX compilation errors
-- CV: uses `pdflatex` (standard LaTeX)
+- CV: uses `lualatex` (pdflatex often fails on modern MiKTeX with `fontawesome5` font-expansion errors; lualatex handles the same sources cleanly)
 - Cover letter: uses `xelatex` (for custom fonts in `OpenFonts/fonts/`)
 - Make sure your LaTeX distribution includes the `moderncv` package
 
