@@ -63,6 +63,25 @@ claude
 
 Claude will ask about your background, skills, and career goals, then populate all profile files automatically. You can import from an existing CV or answer questions interactively. The setup also configures your job search queries so `/scrape` works immediately.
 
+**Alternative: populate from documents**
+
+If you have a collection of career documents (CV PDF, LinkedIn export, diplomas, reference letters, past applications), drop them in the `documents/` folder and run `/setup_docs` instead. It reads all documents, cross-references them for consistency, and merges extracted data into your profile files. Safe to re-run as you add new documents.
+
+```
+documents/
+├── cv/          ← Your master CV (PDF or .tex)
+├── linkedin/    ← LinkedIn profile export (Save to PDF)
+├── diplomas/    ← Degree certificates
+├── references/  ← Reference letters
+└── applications/
+    └── company_role/
+        ├── job_posting.md
+        ├── cover_letter.tex
+        └── outcome.md
+```
+
+See `documents/README.md` for full instructions.
+
 ### 4. Search for jobs
 
 ```bash
@@ -93,7 +112,9 @@ ai-job-search/
 ├── .claude/
 │   ├── commands/
 │   │   ├── apply.md                   # /apply workflow (drafter-reviewer)
-│   │   └── setup.md                   # /setup onboarding interview
+│   │   ├── setup.md                   # /setup onboarding interview
+│   │   ├── setup_docs.md              # /setup_docs document-based profile population
+│   │   └── reset.md                   # /reset wipe profile data or documents folder
 │   ├── skills/
 │   │   ├── job-application-assistant/  # Core application skill
 │   │   │   ├── SKILL.md               # Skill definition
@@ -183,6 +204,18 @@ The four CLI tools in `.agents/skills/` are specific to the **Danish job market*
 ### Salary benchmarking
 
 The salary tool works with any salary data you provide (union statistics, Glassdoor exports, personal research, etc.). See `tools/README_SALARY_TOOL.md` for the expected format and setup. If you don't have salary data, the salary step is simply skipped.
+
+### Starting over
+
+To wipe your profile data and start fresh:
+
+```
+/reset profile    # clears skill files, preserves framework rules
+/reset documents  # deletes files from documents/ folder
+/reset all        # both
+```
+
+`/reset` shows exactly what will be deleted and requires you to type `RESET` to confirm. Nothing is deleted until you do.
 
 ## Tips for better results
 
