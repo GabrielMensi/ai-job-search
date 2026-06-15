@@ -1,8 +1,13 @@
-# Upskill
+---
+name: upskill
+description: >
+  Compares tracked job postings against the candidate profile to identify skill gaps and generate
+  a prioritized learning plan with study resources. Triggers on: /upskill, upskill, skill gaps,
+  what should I learn, learning plan
+allowed-tools: Read, Write, Glob, Grep, WebFetch, WebSearch
+---
 
-**name:** upskill
-**description:** Compares tracked job postings against the candidate profile to identify skill gaps and generate a prioritized learning plan with study resources. Triggers on: /upskill, upskill, skill gaps, what should I learn, learning plan
-**allowed-tools:** Read, Write, Glob, Grep, WebFetch, WebSearch
+# Upskill
 
 ---
 
