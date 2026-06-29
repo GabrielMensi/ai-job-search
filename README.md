@@ -198,7 +198,9 @@ The CV uses [moderncv](https://ctan.org/pkg/moderncv) (banking style). The cover
 
 ### Job search tools
 
-The four CLI tools in `.agents/skills/` are specific to the **Danish job market** (Jobbank, Jobdanmark, Jobindex, Jobnet). They demonstrate the pattern for building job portal integrations. If you're in a different country, you can build equivalent tools for your local job portals using the same structure.
+The four Danish CLI tools in `.agents/skills/` (Jobbank, Jobdanmark, Jobindex, Jobnet) demonstrate the pattern for building a job-portal integration for a specific market. If you're in a different country, you can build equivalent tools for your local job portals using the same structure.
+
+For a **country-agnostic** starting point, the repo also includes **`linkedin-search`** — a job-search skill built on LinkedIn's public, unauthenticated `jobs-guest` endpoints. It is field-agnostic, has **zero runtime dependencies** (runs with just `bun`), and takes the search location as an explicit flag, so it works for any market out of the box (`-l "Berlin, Germany"`, `-l "Mumbai, Maharashtra, India"`, `-l "Remote"`, …). It is intended for **personal use only** — automated access is against LinkedIn's Terms of Service, so keep volume low. See `.agents/skills/linkedin-search/SKILL.md`.
 
 ### Salary benchmarking
 
