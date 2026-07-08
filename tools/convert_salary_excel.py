@@ -42,6 +42,7 @@ COMPANY_PATTERNS = {"firma", "company", "virksomhed", "employer", "arbejdsgiver"
 CITY_PATTERNS = {"by", "city", "kommune", "location", "lokation", "sted"}
 COUNT_PATTERNS = {"antal", "count", "number", "n", "employees", "medarbejdere"}
 INDEX_PATTERNS = {"indeks", "index", "idx", "salary", "løn", "median", "average", "gennemsnit"}
+DANISH_COMPOUND_PATTERNS = {"antal", "indeks", "løn", "gennemsnit", "medarbejdere"}
 
 
 def header_matches(header, patterns):
@@ -50,10 +51,9 @@ def header_matches(header, patterns):
     tokens = set(re.findall(r"[a-zæøåöäü0-9]+", h))
 
     for p in patterns:
-        if len(p) == 1:
-            if p in tokens:
-                return True
-        elif p in h:
+        if p in tokens:
+            return True
+        if p in DANISH_COMPOUND_PATTERNS and p in h:
             return True
     return False
 
@@ -62,10 +62,7 @@ def strip_type_patterns(header, patterns):
     """Remove count/index words from a header to derive a category name."""
     name = header.lower()
     for p in patterns:
-        if len(p) == 1:
-            name = re.sub(rf"\b{re.escape(p)}\b", "", name)
-        else:
-            name = name.replace(p, "")
+        name = re.sub(rf"(?<![a-zæøåöäü0-9]){re.escape(p)}(?![a-zæøåöäü0-9])", "", name)
     return name.strip(" _-")
 
 
