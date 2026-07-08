@@ -3,7 +3,7 @@ name: job-scraper
 description: >
   Scrapes Danish job sites for new positions matching your profile. Deduplicates across runs.
   Triggers on: job scrape, find jobs, search jobs, new jobs, job search, scrape jobs, /scrape
-allowed-tools: Read, Write, Edit, Glob, Grep, WebFetch, WebSearch, Agent, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, WebSearch, Agent, AskUserQuestion
 ---
 
 # Job Scraper
@@ -38,14 +38,42 @@ Optional arguments:
 
 ### Step 1: Search
 
-Run **WebSearch** queries from `search-queries.md`. By default, run the top 3 priority categories. If the user said "broad", run all categories.
+Read `search-queries.md` (this directory) for the search strategy. By default, run the top 3 priority query categories. If the user said "broad", run all categories. If the user specified a focus area (e.g. "data science"), prioritize queries from that category.
 
-If the user specified a focus area (e.g. "data science"), prioritize queries from that category.
+**Use the installed CLI tools as the primary search mechanism.** Fall back to `WebSearch` only for portals that do not have a CLI skill, or if `bun` is unavailable on the system.
 
-For each search:
-- Use `WebSearch` with site-specific queries (jobindex.dk, linkedin.com/jobs, karriere.dk, etc.)
-- Target your configured geographic area
-- Look for postings from the last 14 days
+#### 1a. Check bun availability
+
+```bash
+bun --version
+```
+
+If this fails (bun not installed), skip to **1c (WebSearch fallback)** for all portals and note the fallback in the Step 5 output.
+
+#### 1b. Run CLI tools (primary — run these in parallel where possible)
+
+Discover all installed portal CLI skills by reading every `SKILL.md` found under `.agents/skills/*/SKILL.md`. Each file documents that portal's exact CLI flags and usage examples. **Use each portal's own documented interface — do not guess flags.** This approach automatically includes any new portals added via `/add-portal` without requiring changes to this file.
+
+For each installed portal skill:
+
+1. Read its `SKILL.md` to find the correct `bun run …` invocation and supported flags.
+2. Translate the query terms from `search-queries.md` into that portal's flag format (e.g. `--key`, `--search-string`, `--query`, filter codes — whatever the portal's SKILL.md specifies).
+3. Scope to the last 14 days using the portal's supported recency flag (`--jobage`, `--since <YYYY-MM-DD>`, `--order PublicationDate`, etc. — as documented per portal).
+4. Cap results to ~20 per call using the portal's limit flag.
+5. Use `--format json` for machine-readable output.
+
+Run all portal CLI calls in parallel where possible using the Agent tool. Collect all `results` arrays into a single pool for Step 2.
+
+If a CLI tool exits with a non-zero code, log the error message and continue — do not abort the whole search.
+
+#### 1c. WebSearch fallback
+
+Use `WebSearch` for:
+- Portals listed in `search-queries.md` that do **not** have a corresponding directory under `.agents/skills/`
+- Any portal whose CLI fails at runtime
+- When bun is unavailable (Step 1a failed)
+
+Use the site-specific query strings from `search-queries.md` directly as WebSearch queries for these portals.
 
 ### Step 2: Fetch & Parse
 
