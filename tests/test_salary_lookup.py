@@ -1,6 +1,6 @@
 import unittest
 
-from salary_lookup import format_entry
+from salary_lookup import format_entry, search_company
 
 
 class FormatEntryTests(unittest.TestCase):
@@ -35,6 +35,50 @@ class FormatEntryTests(unittest.TestCase):
         rendered = format_entry(entry, {"index_baseline": 100, "index_label": "Index"})
 
         self.assertIn("private", rendered)
+
+    def test_format_entry_with_zero_baseline(self):
+        entry = {
+            "company": "Example Corp",
+            "city": "",
+            "categories": {
+                "it": {
+                    "count": None,
+                    "index": 45000.0,
+                },
+            },
+        }
+        rendered = format_entry(entry, {"index_baseline": 0, "index_label": "Salary"})
+        self.assertIn("45000.0", rendered)
+        self.assertNotIn("%", rendered)
+
+    def test_format_entry_with_custom_baseline(self):
+        entry = {
+            "company": "Example Corp",
+            "city": "",
+            "categories": {
+                "it": {
+                    "count": None,
+                    "index": 45000.0,
+                },
+            },
+        }
+        rendered = format_entry(entry, {"index_baseline": 40000, "index_label": "Salary"})
+        self.assertIn("45000.0", rendered)
+        self.assertIn("+12.5%", rendered)
+
+
+class SearchCompanyTests(unittest.TestCase):
+    def test_search_company_with_none_city(self):
+        data = {
+            "companies": [
+                {
+                    "company": "Acme",
+                    "city": None,
+                }
+            ]
+        }
+        results = search_company(data, "Acme", city="Aarhus")
+        self.assertEqual(results, [])
 
 
 if __name__ == "__main__":
