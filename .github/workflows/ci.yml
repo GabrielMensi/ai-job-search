@@ -126,6 +126,7 @@ jobs:
       fail-fast: false
       matrix:
         tool:
+          - freehire-search
           - jobbank-search
           - jobdanmark-search
           - jobindex-search
