@@ -145,6 +145,8 @@ def parse_sheet(ws, sheet_label=None):
                 cat_name = strip_type_patterns(col_header, COUNT_PATTERNS)
                 if not cat_name:
                     cat_name = f"category_{len(categories)+1}"
+                else:
+                    cat_name = cat_name.replace(" ", "_").replace("-", "_")
                 categories.append({
                     "name": cat_name,
                     "count_col": col_idx,
@@ -156,6 +158,8 @@ def parse_sheet(ws, sheet_label=None):
                 cat_name = strip_type_patterns(col_header, INDEX_PATTERNS)
                 if not cat_name:
                     cat_name = f"category_{len(categories)+1}"
+                else:
+                    cat_name = cat_name.replace(" ", "_").replace("-", "_")
                 categories.append({
                     "name": cat_name,
                     "index_col": col_idx,

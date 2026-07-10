@@ -2,7 +2,14 @@
 
 import unittest
 
-from salary_lookup import format_entry, match_score, search_company
+from salary_lookup import (
+    format_entry,
+    normalize,
+    anglicize,
+    extract_core_words,
+    match_score,
+    search_company,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +163,68 @@ class SearchCompanyTests(unittest.TestCase):
         }
         results = search_company(data, "Acme", city="Aarhus")
         self.assertEqual(results, [])
+
+
+class UtilityTests(unittest.TestCase):
+    def test_normalize_strips_suffix_and_noise(self):
+        self.assertEqual(normalize("Novo Nordisk A/S"), "novonordisk")
+        self.assertEqual(normalize("Ørsted (VG) Holding"), "ørsted")
+        self.assertEqual(normalize("Chr. Hansen, Denmark Division"), "chrhansen")
+        self.assertEqual(normalize("Simple Corp ApS"), "simplecorp")
+
+    def test_anglicize_replaces_danish_chars(self):
+        self.assertEqual(anglicize("ørsted"), "orsted")
+        self.assertEqual(anglicize("mærsk"), "maersk")
+        self.assertEqual(anglicize("ålborg"), "aalborg")
+
+    def test_extract_core_words(self):
+        self.assertEqual(extract_core_words("Novo Nordisk A/S"), ["novo", "nordisk"])
+        self.assertEqual(extract_core_words("A/S"), [])
+        self.assertEqual(extract_core_words("Test Company (Sub-entity)"), ["test", "company"])
+
+
+class MatchScoreTests(unittest.TestCase):
+    def test_exact_match_score(self):
+        self.assertEqual(match_score("Novo Nordisk", "Novo Nordisk"), 100)
+        self.assertEqual(match_score("novo nordisk", "Novo Nordisk A/S"), 100)
+
+    def test_partial_match_score(self):
+        self.assertGreater(match_score("Novo", "Novo Nordisk A/S"), 80)
+        self.assertEqual(match_score("Novo Nordisk", "Novo"), 75)
+
+    def test_anglicized_match_score(self):
+        self.assertEqual(match_score("Orsted", "Ørsted A/S"), 85)
+
+    def test_overlap_match_score(self):
+        # Overlap of multiple words
+        self.assertGreater(match_score("Novo Tech", "Novo Nordisk Tech A/S"), 30)
+
+    def test_no_match_score(self):
+        self.assertEqual(match_score("Google", "Microsoft"), 0)
+
+
+class SearchCompanyRefactoredTests(unittest.TestCase):
+    def setUp(self):
+        self.data = {
+            "companies": [
+                {"company": "Novo Nordisk A/S", "city": "Bagsværd"},
+                {"company": "Ørsted", "city": "Fredericia"},
+                {"company": "Vestas Wind Systems", "city": "Aarhus"},
+            ]
+        }
+
+    def test_search_by_name(self):
+        results = search_company(self.data, "Novo")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["company"], "Novo Nordisk A/S")
+
+    def test_search_with_city_filter(self):
+        results = search_company(self.data, "Ørsted", city="Fredericia")
+        self.assertEqual(len(results), 1)
+
+        # Mismatching city
+        results_wrong_city = search_company(self.data, "Ørsted", city="Bagsværd")
+        self.assertEqual(len(results_wrong_city), 0)
 
 
 class TestSearchCompanyBasicMatch(unittest.TestCase):

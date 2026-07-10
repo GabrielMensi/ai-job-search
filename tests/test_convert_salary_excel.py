@@ -77,6 +77,16 @@ class DetectColumnTypeTests(unittest.TestCase):
 
         self.assertEqual(companies[0]["categories"]["accounting"], {"count": 12, "index": 105.5})
 
+    def test_parse_sheet_normalizes_paired_category_name_with_underscores(self):
+        ws = FakeWorksheet([
+            ("Company", "Software Engineering Count", "Software Engineering Index"),
+            ("Example Corp", 8, 110.0),
+        ])
+
+        companies = parse_sheet(ws)
+
+        self.assertEqual(companies[0]["categories"]["software_engineering"], {"count": 8, "index": 110.0})
+
 
 if __name__ == "__main__":
     unittest.main()
