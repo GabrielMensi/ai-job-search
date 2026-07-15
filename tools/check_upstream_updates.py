@@ -20,16 +20,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL_DIR = ".claude/skills/job-application-assistant"
 FRAMEWORK_FILES = [
-    "01-candidate-profile.md",
-    "02-behavioral-profile.md",
-    "03-writing-style.md",
-    "04-job-evaluation.md",
-    "05-cv-templates.md",
-    "06-cover-letter-templates.md",
-    "07-interview-prep.md",
-    "SKILL.md",
+    ".claude/skills/job-application-assistant/01-candidate-profile.md",
+    ".claude/skills/job-application-assistant/02-behavioral-profile.md",
+    ".claude/skills/job-application-assistant/03-writing-style.md",
+    ".claude/skills/job-application-assistant/04-job-evaluation.md",
+    ".claude/skills/job-application-assistant/05-cv-templates.md",
+    ".claude/skills/job-application-assistant/06-cover-letter-templates.md",
+    ".claude/skills/job-application-assistant/07-interview-prep.md",
+    ".claude/skills/job-application-assistant/SKILL.md",
+    "AGENTS.md",
 ]
 
 def run_git(args: list[str]) -> tuple[int, str, str]:
@@ -94,10 +94,10 @@ def main() -> int:
     updates_available = []
     errors = []
 
-    for filename in FRAMEWORK_FILES:
-        local_path = ROOT / SKILL_DIR / filename
+    for rel_path in FRAMEWORK_FILES:
+        local_path = ROOT / rel_path
         if not local_path.exists():
-            print(f"Local file missing: {SKILL_DIR}/{filename}")
+            print(f"Local file missing: {rel_path}")
             continue
 
         # Get local version
@@ -105,7 +105,7 @@ def main() -> int:
         local_ver = get_framework_version_from_text(local_text)
         
         # Get upstream version
-        rc, upstream_text, _ = run_git(["show", f"{ref}:{SKILL_DIR}/{filename}"])
+        rc, upstream_text, _ = run_git(["show", f"{ref}:{rel_path}"])
         if rc != 0:
             # File might not exist upstream yet
             continue
@@ -113,18 +113,19 @@ def main() -> int:
         upstream_ver = get_framework_version_from_text(upstream_text)
         
         if not local_ver:
-            errors.append(f"Local file {filename} is missing 'framework_version' in frontmatter.")
+            errors.append(f"Local file {rel_path} is missing 'framework_version' in frontmatter.")
             continue
         if not upstream_ver:
             continue
             
         if parse_semver(upstream_ver) > parse_semver(local_ver):
             updates_available.append({
-                "filename": filename,
+                "filename": Path(rel_path).name,
                 "local": local_ver,
                 "upstream": upstream_ver,
-                "path": f"{SKILL_DIR}/{filename}"
+                "path": rel_path
             })
+
 
     if errors:
         print("Configuration errors:")

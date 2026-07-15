@@ -17,6 +17,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SKILL_DIR = ROOT / ".claude/skills/job-application-assistant"
 FRAMEWORK_FILES = sorted(SKILL_DIR.glob("*.md"))
 
+# Add root AGENTS.md if it exists
+root_agents = ROOT / "AGENTS.md"
+if root_agents.exists():
+    FRAMEWORK_FILES.append(root_agents)
+
 def run_git(args: list[str]) -> tuple[int, str, str]:
     res = subprocess.run(["git"] + args, cwd=str(ROOT), capture_output=True, text=True)
     return res.returncode, res.stdout, res.stderr
