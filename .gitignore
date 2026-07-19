@@ -60,6 +60,7 @@ documents/linkedin/**
 documents/diplomas/**
 documents/references/**
 documents/applications/**
+documents/postings/**
 !documents/**/.gitkeep
 
 # Personal job search tracking
