@@ -97,6 +97,50 @@ EOF
 (cd "$SMOKE_DIR" && xelatex -interaction=nonstopmode -halt-on-error cover_smoke.tex)
 ```
 
+#### Windows: Basic MiKTeX
+
+The full MiKTeX installer bundles every CTAN package and works out of the box, but the smaller [Basic MiKTeX](https://miktex.org/download) installer (`basic-miktex-*.exe`) only ships a minimal package set and needs a couple of one-time settings before the stock templates compile.
+
+By default, MiKTeX installs missing packages on demand but pops up a GUI prompt for each one — which blocks non-interactive terminals (including Claude Code's Bash tool). Turn that into a silent auto-install instead:
+
+```powershell
+initexmf --admin --set-config-value=[MPM]AutoInstall=1
+initexmf --set-config-value=[MPM]AutoInstall=1
+```
+
+(Run the first line from an elevated/Admin PowerShell if you installed MiKTeX for all users; the second line covers a per-user install. Only one will apply depending on how you installed it — running both is harmless.)
+
+If you'd rather not rely on on-the-fly installs at all (for example, for a fully offline compile later), pre-install the same package set the macOS TinyTeX section above lists, using MiKTeX's package manager:
+
+```powershell
+mpm --admin --install=moderncv --install=fontawesome5 --install=fontawesome6 --install=academicons --install=import --install=luatexbase --install=pgf --install=titlesec --install=textpos --install=xltxtra --install=xunicode --install=cite --install=realscripts --install=needspace
+```
+
+Drop `--admin` if MiKTeX is installed for the current user only. If a package name doesn't resolve, `mpm --find=<name>` searches the repository for the correct name.
+
+Quick smoke tests after setup (PowerShell):
+
+```powershell
+Set-Location cv; lualatex -interaction=nonstopmode -halt-on-error main_example.tex; Set-Location ..
+
+$SmokeDir = New-Item -ItemType Directory -Path (Join-Path $env:TEMP "ai-job-cover-smoke-$(Get-Random)")
+Copy-Item cover_letters\cover.cls, cover_letters\OpenFonts -Destination $SmokeDir -Recurse
+@'
+\documentclass[]{cover}
+\begin{document}
+\namesection{Test}{Candidate}{test@example.com}
+\companyname{Example Company}
+\companyaddress{123 Hiring Street\\Example City}
+\currentdate{\today}
+\lettercontent{Dear Hiring Manager,}
+\lettercontent{This smoke test verifies that xelatex can load cover.cls and the bundled fonts.}
+\closing{Sincerely,}
+\signature{Test Candidate}
+\end{document}
+'@ | Set-Content (Join-Path $SmokeDir "cover_smoke.tex")
+Push-Location $SmokeDir; xelatex -interaction=nonstopmode -halt-on-error cover_smoke.tex; Pop-Location
+```
+
 ### Optional: pdftotext (for the ATS check)
 
 `/apply` runs an ATS parseability check on the compiled CV: it extracts the PDF's text layer and verifies contact details, reading order, and keyword coverage the way an applicant-tracking system sees them. This uses `pdftotext` from [poppler](https://poppler.freedesktop.org/), which is not part of TeX distributions:
