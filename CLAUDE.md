@@ -1,8 +1,5 @@
 # Job Application Assistant for [YOUR_NAME]
 
-<!-- SETUP: This file is populated by running /setup -->
-<!-- After running /setup, all [PLACEHOLDER] tokens will be replaced with your actual information -->
-
 ## Role
 This repo is a job application workspace. Claude acts as a career advisor and application assistant for [YOUR_NAME], helping with:
 1. **Job fit evaluation** - Assess job postings against your profile (skills, experience, behavioral traits)
@@ -13,70 +10,66 @@ This repo is a job application workspace. Claude acts as a career advisor and ap
 
 ## Candidate Profile
 
-<!-- This section is auto-populated by /setup. You can also fill it in manually. -->
-
 ### Identity
 - **Name:** [YOUR_NAME]
-- **Location:** [YOUR_CITY], [YOUR_COUNTRY] ([YOUR_COMMUTE_CONSTRAINTS])
-- **Languages:** [YOUR_LANGUAGES]
-- **CV language:** [YOUR_CV_LANGUAGE] <!-- English unless your market expects otherwise; /setup asks -->
+- **Location:** Rosario, Argentina (remote-first; open to remote/hybrid worldwide, no return-to-office mandate)
+- **Languages:** Spanish (Native), English (B1/B2, Professional Working)
+- **CV language:** English
 
-- **Status:** [YOUR_EMPLOYMENT_STATUS]
-- **LinkedIn headline:** "[YOUR_LINKEDIN_HEADLINE]"
+- **Status:** Currently employed at EGO Design (Frontend Software Engineer), open to new opportunities
+- **LinkedIn headline:** "Frontend Software Engineer | React & Next.js Specialist | Building Scalable, High-Performance Web Apps"
 
 ### Education
-<!-- List your degrees, most recent first -->
-- **[DEGREE_LEVEL] in [FIELD]** ([YEAR_START]-[YEAR_END]) - [INSTITUTION]
-  - Thesis: "[THESIS_TITLE]"
-  - Topics: [KEY_TOPICS]
+- **Bachelor's in Information Systems Engineering** (Mar 2021-May 2023, coursework discontinued) - Universidad Tecnológica Nacional, Facultad Regional Rosario
+  - Thesis: N/A (discontinued before thesis stage)
+  - Topics: Not specified in source documents
 
 ### Professional Experience
-<!-- List your roles, most recent first -->
-- **[JOB_TITLE]** ([START_DATE] - [END_DATE]) - **[COMPANY]** ([LOCATION])
-  - [KEY_RESPONSIBILITY_1]
-  - [KEY_RESPONSIBILITY_2]
-  - [KEY_ACHIEVEMENT]
+- **Frontend Software Engineer** (August 2022 - Present) - **EGO Design** (Buenos Aires, AR - Remote)
+  - Built the frontend end-to-end for close to 20 production projects across automotive, fintech, industrial, and wealth-management clients (Toyota, Lexus, Sullair, Veritran)
+  - Co-designed, alongside the CTO, the agency's architecture migration from monolithic Django+Wagtail to a decoupled Next.js + headless CMS model; implemented the pilot (Mitta.cl) and defined the standard replicated across 4 more projects
+  - Designed a normalization layer (Django REST/Python → TypeScript/Next.js) that cut delivery cycles from months to weeks
+  - Delivered a 90% bundle-size reduction (5.5MB → 400KB) and raised Core Web Vitals from 45 to 90+ on Mitta.cl
 
 ### Technical Skills
-- **Primary:** [YOUR_PRIMARY_SKILLS]
-- **Secondary:** [YOUR_SECONDARY_SKILLS]
-- **Domain:** [YOUR_DOMAIN_EXPERTISE]
-- **Software:** [YOUR_TOOLS_AND_SOFTWARE]
+- **Primary:** JavaScript (ES6+), TypeScript, React, Next.js (10-16)
+- **Secondary:** Python, Django/Django REST Framework, Wagtail, Node.js/Express, GraphQL (Apollo)
+- **Domain:** CMS-driven/headless architecture, e-commerce & payment flows (Transbank/Webpay), frontend performance engineering, technical SEO/AEO/GEO, i18n
+- **Software:** Git, GitHub Actions (CI/CD), Docker, AWS (S3, CloudFront), Redis, Postman, Turborepo
 
 ### Certifications
-<!-- List relevant certifications with dates -->
-- **[CERTIFICATION_NAME]** - [HOURS]h - completed [DATE]
+- **Next.js 14** - Platzi
+- **Django avanzado (Advanced Django)** - Platzi
+- **Python** - Platzi
+- **JavaScript Certificate** - HackerRank
+- **CSS Certificate** - HackerRank
 
 ### Publications
-<!-- List peer-reviewed publications, if any -->
-- [AUTHOR_LIST] ([YEAR]). [TITLE]. [JOURNAL].
+None yet.
 
 ### Awards
-<!-- List relevant awards, hackathons, competitions -->
-- [AWARD_NAME] - [EVENT] ([YEAR])
+None yet.
 
 ### Behavioral Profile
-<!-- Your behavioral assessment results (PI, DISC, Myers-Briggs, or self-assessment) -->
-- **[TRAIT_1]** - [DESCRIPTION]
-- **[TRAIT_2]** - [DESCRIPTION]
-- **Strengths:** [YOUR_STRENGTHS]
-- **Growth areas:** [YOUR_GROWTH_AREAS]
-- **Thrives in:** [YOUR_IDEAL_ENVIRONMENT]
+<!-- Inferred from LinkedIn About / GitHub README - no formal PI/DISC/MBTI assessment on file yet. Share results or answer a few quick questions anytime to sharpen this. -->
+- **Systems/infrastructure-oriented** - Gravitates toward building foundational systems (normalization layers, reusable components, CMS integrations) that other work builds on top of
+- **Ownership-driven** - Took technical ownership of architecture and optimization across ~20 production projects; co-designed a company-wide migration alongside the CTO
+- **Strengths:** Adaptability across stacks (Next.js, Django/Wagtail, Laravel, Express+GraphQL) and industries; comfortable partnering directly with technical leadership on architecture decisions
+- **Growth areas:** Not yet formally assessed
+- **Thrives in:** Remote-first, architecture-heavy work with close collaboration with technical leadership
 
 ### What Excites You
-<!-- What motivates you professionally -->
-- [PASSION_1]
-- [PASSION_2]
+- Greenfield / 0-to-1 product builds
+- Architecture & foundational systems design
+- Performance & optimization work
+- Cross-functional business-flow complexity (quotes, payments, and similar)
 
 ### Target Sectors
-<!-- Industries and companies you're targeting -->
-- [SECTOR_1]: [EXAMPLE_COMPANIES]
-- [SECTOR_2]: [EXAMPLE_COMPANIES]
+- Agency/consultancy client work: automotive, fintech, industrial, wealth management (e.g. Toyota, Lexus, Sullair, Veritran)
+- Single product company: open to a long-term product-focused role in a similar technical domain (Next.js/React, CMS-driven or headless architecture)
 
 ### Deal-breakers
-<!-- Hard constraints on job search -->
-- [DEALBREAKER_1]
-- [DEALBREAKER_2]
+- No return-to-office mandate (must remain remote-friendly)
 
 ## Repo Structure
 - `cv/` - LaTeX CV variants (moderncv template, banking style)

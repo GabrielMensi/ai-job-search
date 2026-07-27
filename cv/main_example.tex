@@ -2,7 +2,6 @@
 %% Comprehensive overview of all competencies, experience, and achievements.
 %% Use as a master reference when tailoring role-specific CVs.
 %%
-%% SETUP: Run /setup to populate this with your actual information.
 %% Compile with: lualatex main_example.tex
 %% (pdflatex often fails on modern MiKTeX with fontawesome5 font-expansion errors.)
 
@@ -31,11 +30,11 @@
 \usepackage{import}
 
 % personal data
-\name{[First]}{[Last]}
-\address{[Your Address, City, Country]}{}{}
-\phone[mobile]{[+XX XXXXXXXXXX]}
-\email{[your.email@example.com]}
-\extrainfo{\href{[https://linkedin.com/in/your-profile]}{LinkedIn}, \href{[https://github.com/your-username]}{GitHub}}
+\name{Gabriel}{Mensi}
+\address{Rosario, Argentina}{}{}
+\phone[mobile]{[YOUR_PHONE]}
+\email{[YOUR_EMAIL]}
+\extrainfo{\href{https://www.linkedin.com/in/gabriel-mensi/}{LinkedIn}, \href{https://github.com/GabrielMensi}{GitHub}}
 
 \begin{document}
 
@@ -46,7 +45,7 @@
 % ============================================================
 
 \vspace{6pt}
-\small{[Write a 3-5 line profile statement tailored to the role you're applying for. Focus on what makes you uniquely qualified. Example: "Data scientist with a PhD in [field] and X years of industry experience. Combines deep domain expertise in [domain] with strong applied machine learning and Python development skills. Experienced in developing end-to-end ML pipelines, from data ingestion to stakeholder-facing dashboards."]}
+\small{Frontend Software Engineer with 4 years leading frontend delivery on close to 20 production projects for clients across automotive, fintech, industrial, and wealth management (Toyota, Lexus, Sullair, Veritran). Specialized in Next.js, React, and CMS-driven architectures -- co-designed my agency's migration from monolithic Django templates to a decoupled Next.js + headless CMS stack, implementing its pilot project and defining the standard later replicated across four more projects. Builds the foundational systems -- normalization layers, reusable component systems, performance optimizations -- that make everything else faster to ship.}
 
 % ============================================================
 %     CORE COMPETENCIES
@@ -56,15 +55,15 @@
 \vspace{1pt}
 \begin{itemize}
 
-\item \textbf{[Skill Category 1]}: [Specific skills, frameworks, tools. Be concrete.]
+\item \textbf{Frontend Architecture \& Next.js}: Next.js (versions 10--16), React, React Hooks, TypeScript -- decoupled/headless architecture design, from monolithic-to-Next.js migrations to reusable component systems.
 
-\item \textbf{[Skill Category 2]}: [Specific skills, frameworks, tools.]
+\item \textbf{CMS-Driven Systems}: Django, Django REST Framework, Wagtail -- headless CMS integration, dynamic component systems, multi-tenant backend architecture.
 
-\item \textbf{[Skill Category 3]}: [Specific skills, frameworks, tools.]
+\item \textbf{Business-Critical Flows}: Multi-step quote engines, payment integrations (Transbank/Webpay), JWT-based authentication, global state management (Redux Toolkit, Zustand).
 
-\item \textbf{[Skill Category 4]}: [Domain expertise, methods, approaches.]
+\item \textbf{Performance Engineering}: Core Web Vitals optimization, bundle-size reduction, Redis/CloudFront caching, technical SEO/AEO/GEO.
 
-\item \textbf{[Skill Category 5]}: [Tools, platforms, software.]
+\item \textbf{Testing \& Tooling}: Jest, React Testing Library, Cypress, Playwright, Storybook, Git/GitHub Actions CI/CD, Docker.
 
 \end{itemize}
 
@@ -76,32 +75,15 @@
 \vspace{3pt}
 \begin{itemize}
 
-% --- Most Recent Role ---
-\item{\cventry{[YYYY--Present]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
+\item{\cventry{2022--Present}{Frontend Software Engineer}{EGO Design}{Buenos Aires, AR -- Remote}{}{\vspace{1pt}
 \begin{itemize}
-    \item [Achievement or responsibility 1 - be specific, use numbers where possible]
-    \item [Achievement or responsibility 2]
-    \item [Achievement or responsibility 3]
-    \item [Achievement or responsibility 4]
-\end{itemize}}}
-
-\vspace{3pt}
-
-% --- Previous Role ---
-\item{\cventry{[YYYY--YYYY]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
-\begin{itemize}
-    \item [Achievement or responsibility 1]
-    \item [Achievement or responsibility 2]
-    \item [Achievement or responsibility 3]
-\end{itemize}}}
-
-\vspace{3pt}
-
-% --- Earlier Role ---
-\item{\cventry{[YYYY--YYYY]}{[Job Title]}{[Company]}{[City, Country]}{}{\vspace{1pt}
-\begin{itemize}
-    \item [Achievement or responsibility 1]
-    \item [Achievement or responsibility 2]
+    \item Built the frontend end-to-end for close to 20 production projects -- architecture, implementation, and testing -- across automotive, fintech, industrial, and wealth-management clients (Toyota, Lexus, Sullair, Veritran), working daily inside multidisciplinary product teams.
+    \item Co-designed, alongside the CTO, the agency's frontend architecture migration from a monolithic Django+Wagtail stack to a decoupled model (Next.js + Django/Wagtail multi-tenant headless backend); implemented the pilot project (Mitta.cl) and defined the technical guidelines later replicated across 4 more projects.
+    \item Designed and implemented a normalization layer (Django REST/Python $\rightarrow$ TypeScript/Next.js) standardizing backend responses, cutting delivery cycles from months to weeks.
+    \item Built a CMS-driven dynamic component system (instantiation, routing, SEO/meta tags, menus, translations, previews) giving non-technical teams full control over page content.
+    \item Delivered a 90\% reduction in initial bundle size (5.5MB $\rightarrow$ 400KB) and raised Core Web Vitals scores from 45 to 90+ on Mitta.cl through icon-system migration and deferred third-party script loading.
+    \item Led an in-house technical SEO/AEO/GEO report on Mitta.cl, including detecting and fixing AI bots blocked by a robots.txt misconfiguration.
+    \item Implemented complex business flows -- multi-step quote engines, payment integrations (Transbank/Webpay), JWT-based authentication, and global state management (Redux Toolkit, Zustand) -- across automotive, fintech, and industrial clients.
 \end{itemize}}}
 
 \end{itemize}
@@ -114,14 +96,8 @@
 \vspace{1pt}
 \begin{itemize}
 
-\item{\cventry{[YYYY--YYYY]}{[Degree] in [Field]}{[Institution]}{[City, Country]}{}{\vspace{1pt}
-Thesis: ``[Thesis Title].'' [Brief description of research focus.]
-}}
-
-\vspace{3pt}
-
-\item{\cventry{[YYYY--YYYY]}{[Degree] in [Field]}{[Institution]}{[City, Country]}{}{\vspace{1pt}
-[Brief description or key topics.]
+\item{\cventry{2021--2023}{Bachelor's in Information Systems Engineering (coursework)}{Universidad Tecnológica Nacional -- Facultad Regional Rosario}{Rosario, AR}{}{\vspace{1pt}
+Coursework completed; degree not finalized.
 }}
 
 \end{itemize}
@@ -133,27 +109,7 @@ Thesis: ``[Thesis Title].'' [Brief description of research focus.]
 \section{Languages}
 \vspace{1pt}
 \begin{itemize}
-\item [Language 1] (native), [Language 2] (fluent), [Language 3] (intermediate).
-\end{itemize}
-
-% ============================================================
-%     PUBLICATIONS (optional)
-% ============================================================
-
-\section{Publications}
-\vspace{1pt}
-\begin{itemize}
-\item [Author(s)] ([Year]). [Title]. [Journal/Conference]. \href{[DOI_URL]}{DOI link}
-\end{itemize}
-
-% ============================================================
-%     HONORS AND AWARDS (optional)
-% ============================================================
-
-\section{Honors and Awards}
-\vspace{1pt}
-\begin{itemize}
-\item{\textbf{[Award Name]} -- [Event/Organization] ([Year]).}
+\item Spanish (native), English (B1/B2, professional working proficiency).
 \end{itemize}
 
 % ============================================================

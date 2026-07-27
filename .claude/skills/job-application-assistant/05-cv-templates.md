@@ -115,12 +115,11 @@ When the role sits outside your home domain, **lead with the domain-transfer arg
 
 **Create 2-3 profile statement templates for your main role types:**
 
-<!-- SETUP: These are populated based on your background -->
-**For [YOUR_PRIMARY_ROLE_TYPE] roles:**
-> [YOUR_PROFILE_STATEMENT_TEMPLATE_1]
+**For Frontend Software Engineer (Next.js/React) roles:**
+> Frontend Software Engineer with 4 years leading frontend delivery on close to 20 production projects for clients across automotive, fintech, industrial, and wealth management (Toyota, Lexus, Sullair, Veritran). Specialized in Next.js, React, and CMS-driven architectures - co-designed my agency's migration to a decoupled Next.js + headless Django/Wagtail stack and implemented its pilot project. Delivered a 90% bundle-size reduction and doubled Core Web Vitals scores through hands-on performance engineering, and built the normalization layers and component systems that made every subsequent project faster to ship.
 
-**For [YOUR_SECONDARY_ROLE_TYPE] roles:**
-> [YOUR_PROFILE_STATEMENT_TEMPLATE_2]
+**For Technical Lead / Architecture-focused roles:**
+> Frontend engineer who co-designed, alongside a CTO, an agency-wide migration from monolithic Django templates to a decoupled Next.js + headless CMS architecture - implementing the pilot project and defining the technical standard later replicated across 4 more production projects. I look for the infrastructure-level problem behind a feature request: a normalization layer that cut delivery cycles from months to weeks, a CMS-driven component system that gave non-technical teams full page control. I pair that architectural thinking with hands-on delivery across close to 20 production projects.
 
 Statements labeled *[Used for: <company>_<role>]* were extracted from archived application drafts by `/setup` Path A. They are **phrasing references, never fact sources**: when drafting from one, every factual claim still comes from `01-candidate-profile.md` - a past tailored draft does not vouch for its own accuracy.
 

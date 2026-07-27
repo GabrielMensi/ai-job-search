@@ -39,6 +39,68 @@ Keep answers to 1-2 minutes. Be specific. End with what you learned or would do 
 
 <!-- Add more STAR examples as needed. Aim for 4-6 covering different competencies. -->
 
+## STAR Candidates (Complete Manually)
+
+### Co-designing the frontend architecture migration
+**Source:** CV / LinkedIn / ego_projects_detail.md - EGO Design
+**What happened:** Co-designed, alongside the CTO, the agency's shift from monolithic Django templates to a decoupled Next.js + headless CMS architecture, then implemented the pilot project (Mitta.cl) and defined the guidelines replicated across 4 more projects.
+**Why it matters:** Technical leadership, cross-functional influence without formal authority, architecture decision-making
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
+### Mitta.cl performance optimization
+**Source:** CV / LinkedIn / ego_projects_detail.md - EGO Design
+**What happened:** Reduced initial bundle size from 5.5MB to 400KB and raised Core Web Vitals from 45 to 90+ by migrating the icon system and deferring third-party tracking scripts, with bot detection to avoid affecting crawlers/synthetic audits.
+**Why it matters:** Technical problem-solving, quantifiable impact, performance engineering
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
+### Normalization layer cutting delivery time
+**Source:** CV / LinkedIn / ego_projects_detail.md - EGO Design
+**What happened:** Designed a normalization layer (Django REST/Python → TypeScript/Next.js) that became the standard pattern for every subsequent project, cutting delivery cycles from months to weeks.
+**Why it matters:** Process improvement, cross-team/cross-project impact, technical foundation-building
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
+### MAF Fondos Perú built from scratch to launch
+**Source:** ego_projects_detail.md - EGO Design
+**What happened:** Designed and built a scheduled vehicle-savings product ("Toyota Ahorro Flex") from scratch through production launch, including a multi-step savings simulator and a Complaints Book form with conditional validation and PDF generation.
+**Why it matters:** Ownership of a greenfield project end-to-end, handling ambiguity, delivery under a small team
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
+### Mills - sole developer on an international client project
+**Source:** ego_projects_detail.md - EGO Design
+**What happened:** Built a bilingual (ES/EN) corporate site end to end, alone, for a wealth-management firm with offices across Argentina, Miami, Spain, and the Bahamas - including a service-to-service JWT auth layer and interactive financial charts.
+**Why it matters:** Autonomy, stakeholder management without a team buffer, working with an international client
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
+### Finding and fixing the robots.txt AI-bot-blocking bug
+**Source:** ego_projects_detail.md - EGO Design
+**What happened:** Led an in-house technical SEO/AEO/GEO report on Mitta.cl and, in the process, detected and fixed AI bots being blocked by a robots.txt misconfiguration.
+**Why it matters:** Technical investigation and debugging under ambiguity, initiative beyond the assigned task
+**S/T/A/R stub:**
+- Situation:
+- Task:
+- Action:
+- Result:
+
 ## Common Tough Questions
 
 ### "Why did you leave [previous company]?"

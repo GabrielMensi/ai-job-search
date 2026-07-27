@@ -11,65 +11,65 @@ The `site:` query templates in this file are the **WebSearch fallback** — for 
 ## Search Sites
 
 Primary (your market's job boards - scaffold one with `/add-portal`):
-- **[YOUR_JOB_BOARD]** - your market's largest general job board
-- **linkedin.com/jobs** - LinkedIn job listings (filter: [YOUR_COUNTRY] / [YOUR_CITY]); also covered by `linkedin-search` CLI
-- **[YOUR_INDUSTRY_JOB_BOARD]** - a niche/industry board for your field (optional)
-- **[YOUR_ADDITIONAL_JOB_BOARD]** - another major board for your market (optional)
+- **No LatAm-specific board scaffolded yet** - run `/add-portal` for a board like Computrabajo, Bumeran, Zonajobs, or GetOnBoard when ready
+- **linkedin.com/jobs** - LinkedIn job listings (remote / Argentina); also covered by `linkedin-search` CLI
+- **freehire.me** - covered by the `freehire-search` CLI (country-agnostic)
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
 
 ## Query Categories
 
-Queries are grouped by priority. Each query should be combined with your location terms (e.g. your city, region, or metro area) where the site supports it.
+Queries are grouped by priority. Location scope is "remote worldwide" by default - combine with "remote" or "Argentina" rather than a specific city where the site supports it.
 
-### Priority 1: [YOUR_PRIMARY_ROLE_TYPE]
+### Priority 1: Frontend Software Engineer (Next.js / React)
 
 These match your strongest and most desired career direction.
 
 ```
-site:[YOUR_JOB_BOARD] "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "[YOUR_KEY_SKILL]" [YOUR_CITY]
-site:linkedin.com/jobs "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_COUNTRY]
+"Frontend Software Engineer" Next.js remote
+"Frontend Developer" React remote
+"React Developer" OR "Next.js Developer" remote
+site:linkedin.com/jobs "Senior Frontend Engineer" remote
 ```
 
-### Priority 2: [YOUR_DOMAIN_EXPERTISE]
+### Priority 2: CMS-driven / headless architecture
 
 These match your domain expertise.
 
 ```
-site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] OR [YOUR_REGION]
-site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_2] [YOUR_COUNTRY]
-site:linkedin.com/jobs [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] [YOUR_COUNTRY]
+"headless CMS" Next.js frontend remote
+Django Wagtail Next.js frontend developer
+"frontend architecture" Next.js remote
+site:linkedin.com/jobs Wagtail OR "headless CMS" frontend
 ```
 
-### Priority 3: [YOUR_ADJACENT_ROLE_TYPE]
+### Priority 3: Full Stack Engineer
 
 Adjacent roles you could pivot into.
 
 ```
-site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_1]" [YOUR_KEY_SKILL] [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_2]" [YOUR_KEY_SKILL] [YOUR_CITY]
+"Full Stack Engineer" Next.js Django remote
+"Full Stack Developer" React Python remote
 ```
 
-### Priority 4: Broader Technical / Consulting
+### Priority 4: Broader Technical / Agency Consulting
 
 Wider net for general technical roles.
 
 ```
-site:[YOUR_JOB_BOARD] [YOUR_KEY_SKILL] developer [YOUR_CITY]
-site:linkedin.com/jobs "[YOUR_KEY_SKILL] developer" [YOUR_CITY]
-site:[YOUR_JOB_BOARD] "technical consultant" [YOUR_DOMAIN] [YOUR_CITY]
+TypeScript developer remote
+"technical consultant" frontend Next.js remote
+frontend engineer agency Next.js remote
 ```
 
 ## Location Filter
 
-When evaluating results, verify the job location is within reasonable commute distance from your home. Define acceptable areas:
-- [YOUR_CITY] and surrounding areas
-- [ACCEPTABLE_AREA_1]
-- [ACCEPTABLE_AREA_2]
-- [BORDERLINE_AREA] (borderline - ~X min by transit)
-- [TOO_FAR_AREA] (too far)
+Geographic scope is **remote worldwide** (confirmed during `/setup`) - candidate is based in Rosario, Argentina and open to remote/hybrid roles globally, with no return-to-office mandate. Define acceptable areas:
+- Remote (any country) - ideal
+- Hybrid or on-site in Rosario or Buenos Aires, Argentina - acceptable
+- On-site elsewhere in Argentina - borderline, discuss relocation/commute before proceeding
+- On-site outside Argentina requiring relocation, or any role with a return-to-office mandate - too far / deal-breaker
 
 ## Date Filter
 
