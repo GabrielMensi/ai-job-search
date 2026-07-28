@@ -11,9 +11,10 @@ The `site:` query templates in this file are the **WebSearch fallback** — for 
 ## Search Sites
 
 Primary (your market's job boards - scaffold one with `/add-portal`):
-- **No LatAm-specific board scaffolded yet** - run `/add-portal` for a board like Computrabajo, Bumeran, Zonajobs, or GetOnBoard when ready
+- **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain); covered by the `getonboard-search` CLI. Postings skew Chile-heavy but include Argentina/Buenos Aires listings.
 - **linkedin.com/jobs** - LinkedIn job listings (remote / Argentina); also covered by `linkedin-search` CLI
 - **freehire.me** - covered by the `freehire-search` CLI (country-agnostic)
+- Other LatAm boards without a CLI yet (Computrabajo, Bumeran, Zonajobs) - scaffold one with `/add-portal` when ready
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
@@ -31,6 +32,8 @@ These match your strongest and most desired career direction.
 "Frontend Developer" React remote
 "React Developer" OR "Next.js Developer" remote
 site:linkedin.com/jobs "Senior Frontend Engineer" remote
+site:getonbrd.com "React" frontend
+site:getonbrd.com "Next.js" OR "React" desarrollador remote
 ```
 
 ### Priority 2: CMS-driven / headless architecture
