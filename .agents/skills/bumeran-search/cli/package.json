@@ -1,0 +1,20 @@
+{
+  "name": "bumeran-cli",
+  "version": "1.0.0",
+  "description": "CLI for searching jobs on Bumeran (bumeran.com.ar), Argentina's biggest general job board — talks to its backend JSON API directly (it's a client-only SPA with no server-rendered HTML), zero runtime dependencies. Personal use only (see SKILL.md).",
+  "type": "module",
+  "main": "src/cli.ts",
+  "bin": {
+    "bumeran-search": "src/cli.ts"
+  },
+  "scripts": {
+    "start": "bun run src/cli.ts",
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/bun": "1.3.14"
+  }
+}
