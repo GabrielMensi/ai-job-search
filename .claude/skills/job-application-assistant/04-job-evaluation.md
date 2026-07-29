@@ -30,6 +30,12 @@ If the candidate's permit also constrains *hours* or *start date* (a student vis
 
 A role that fails this gate is not scored and not drafted. Everything below applies only to roles that pass it.
 
+## Deal-Breaker Gate — run before scoring
+
+Check the posting against every item in CLAUDE.md's **Deal-breakers** list under Candidate Profile. A match on any one is **FAIL — hard stop.** Do not score, do not draft. Report which deal-breaker triggered, quoting the relevant posting text — same reporting standard as the eligibility gate above.
+
+**Language requirement (worked example):** the deal-breaker is the posting **requiring proficiency in a language other than English or Spanish** as a condition of the role — "fluent Polish required," "must communicate with the Warsaw team in Russian," "German B2+ mandatory." It is **not** triggered by the posting simply being *written* in a language other than English/Spanish — a Portuguese-language ad for a role that only needs English/Spanish on the job passes fine. Read the requirement itself, not the language the ad happens to be written in, and quote the exact requirement line when it fails.
+
 ## Scoring Dimensions
 
 Evaluate each job posting against these five dimensions:

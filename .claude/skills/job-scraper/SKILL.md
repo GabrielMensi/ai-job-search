@@ -113,6 +113,8 @@ For each new job, do a rapid fit check (NOT the full evaluation from `04-job-eva
 - **Medium match**: Role is adjacent to your experience
 - **Low match**: Role requires significant skills you lack
 
+**Deal-breaker override:** before assigning a match level, check the posting against CLAUDE.md's Deal-breakers list (return-to-office mandate, a required language outside English/Spanish, and any others recorded there). A deal-breaker match overrides skill fit — mark it **Low** regardless of how well the skills align, and name the specific deal-breaker in the highlight bullets so it isn't buried under an otherwise-good-looking match.
+
 ### Step 4: Deduplicate & Store
 
 1. Add ALL fetched jobs (new and skipped) to `seen_jobs.json` with structure:

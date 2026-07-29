@@ -70,6 +70,7 @@ None yet.
 
 ### Deal-breakers
 - No return-to-office mandate (must remain remote-friendly)
+- Posting requires proficiency in a language other than English or Spanish as a condition of the role (e.g. Polish, Russian, German) — the posting simply being written in another language is not the trigger, only an actual language requirement is
 
 ## Repo Structure
 - `cv/` - LaTeX CV variants (moderncv template, banking style)
