@@ -187,6 +187,10 @@ ai-job-search/
 │   ├── jobdanmark-search/             # Jobdanmark.dk (Denmark)
 │   ├── jobindex-search/               # Jobindex.dk (Denmark)
 │   ├── jobnet-search/                 # Jobnet.dk (Denmark, government portal)
+│   ├── getonboard-search/             # GetOnBoard / getonbrd.com (LatAm tech jobs)
+│   ├── computrabajo-search/           # Computrabajo (Argentina)
+│   ├── bumeran-search/                # Bumeran (Argentina, Navent group)
+│   ├── zonajobs-search/               # Zonajobs (Argentina, Navent group)
 │   ├── linkedin-search/               # LinkedIn public job listings (country-agnostic)
 │   └── freehire-search/               # freehire.me tech job aggregator (multi-market, REST API)
 ├── cv/
@@ -294,6 +298,14 @@ The four Danish CLI tools in `.agents/skills/` (Jobbank, Jobdanmark, Jobindex, J
 ```
 
 Give it your local job board's URL. The command investigates the portal (search-URL pattern, result-page structure, robots.txt/access rules), scaffolds a CLI skill with the same structure, commands, and output contract as the shipped ones, and test-runs a live query before registering anything. Auth-walled portals are declined, and portals with restrictive terms get a prominent personal-use-only warning in the generated skill. The generated skill is market-specific and lives in your fork; the generator itself is the universal part.
+
+This fork additionally ships four Argentina/LatAm portal CLIs, scaffolded the same way via `/add-portal`:
+
+- **`getonboard-search`** — [getonbrd.com](https://www.getonbrd.com), LatAm tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain). See `.agents/skills/getonboard-search/SKILL.md` and `url-reference.md` for access notes (its `robots.txt` names specific AI crawlers as disallowed — read the personal-use warning before relying on it).
+- **`computrabajo-search`** — [ar.computrabajo.com](https://ar.computrabajo.com), Argentina. Server-rendered, path-segment search, good multi-word query support.
+- **`bumeran-search`** / **`zonajobs-search`** — [bumeran.com.ar](https://www.bumeran.com.ar) / [zonajobs.com.ar](https://www.zonajobs.com.ar), Argentina (Navent group, shared backend behind Cloudflare — `zonajobs-search` filters out cross-posted Bumeran duplicates automatically).
+
+These join `linkedin-search`/`freehire-search` as country-agnostic-friendly starting points, and the search framework defaults to bilingual **English/Spanish** query generation (see `search-queries.md`) with a language-requirement deal-breaker (`04-job-evaluation.md`'s Deal-Breaker Gate, `CLAUDE.md`'s Deal-breakers list) — a posting *requiring* a third language as a job condition is a hard reject, independent of what language the posting itself is written in. This fork tracks upstream via `python3 tools/check_upstream_updates.py` (see `CONTRIBUTING.md` / `SETUP.md` §8).
 
 Maintaining a fork adapted to your market or language? Add it to the [Community forks & adaptations](https://github.com/MadsLorentzen/ai-job-search/discussions/78) thread so others can find it.
 
