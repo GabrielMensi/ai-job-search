@@ -98,7 +98,7 @@ apply link.
 ## Usage examples
 
 ```bash
-# Frontend roles anywhere in Argentina (this candidate's core stack)
+# Frontend roles anywhere in Argentina (example query for a frontend-focused search)
 bun run .agents/skills/computrabajo-search/cli/src/cli.ts search -q "desarrollador frontend" --format table
 
 # React roles in Buenos Aires
@@ -107,7 +107,7 @@ bun run .agents/skills/computrabajo-search/cli/src/cli.ts search -q "react" -l "
 # React roles, remote only
 bun run .agents/skills/computrabajo-search/cli/src/cli.ts search -q "react" --remote remote --format table
 
-# Everything currently listed in Rosario (this candidate's home city), regardless of role
+# Everything currently listed in Rosario (used here as an example city), regardless of role
 bun run .agents/skills/computrabajo-search/cli/src/cli.ts search -l "Santa Fe en Rosario" --format table
 
 # Postings from the last week only

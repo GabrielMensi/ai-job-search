@@ -110,7 +110,7 @@ employment type, work mode (remote/hybrid/onsite), area, and apply link.
 ## Usage examples
 
 ```bash
-# React roles anywhere in Argentina (this candidate's core stack)
+# React roles anywhere in Argentina (example query for a frontend-focused search)
 bun run .agents/skills/zonajobs-search/cli/src/cli.ts search -q "react" --format table
 
 # React roles, filtered to Rosario

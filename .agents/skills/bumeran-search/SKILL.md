@@ -91,13 +91,13 @@ seniority, employment type, work mode (remote/hybrid/onsite), category, and appl
 ## Usage examples
 
 ```bash
-# React roles anywhere in Argentina (this candidate's core stack)
+# React roles anywhere in Argentina (example query for a frontend-focused search)
 bun run .agents/skills/bumeran-search/cli/src/cli.ts search -q "react" --format table
 
 # React roles filtered to Buenos Aires
 bun run .agents/skills/bumeran-search/cli/src/cli.ts search -q "react" -l "Buenos Aires" --format table
 
-# Broader developer search, filtered to Rosario (this candidate's home city)
+# Broader developer search, filtered to Rosario (used here as an example city)
 bun run .agents/skills/bumeran-search/cli/src/cli.ts search -q "desarrollador" -l "Rosario" --format table
 
 # Postings from the last 2 weeks only

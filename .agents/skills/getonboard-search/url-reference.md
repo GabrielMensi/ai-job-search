@@ -56,8 +56,8 @@ Known category slugs (from the site nav): `programming`, `design-ux`,
 
 `/jobs/programming` (343 results at verification time) is the default/fallback listing
 this CLI uses when `--query` doesn't resolve to a real tag or category, and when no
-`--query`/`--location` is given at all — reasonable defaults for this candidate's
-target roles. Plain `/jobs` (no suffix) returns a smaller, apparently differently-capped
+`--query`/`--location` is given at all — a reasonable default for frontend/software
+roles. Plain `/jobs` (no suffix) returns a smaller, apparently differently-capped
 slice of the same Programming listing (155 vs 343 results in a side-by-side fetch) —
 use `/jobs/<category>` explicitly rather than the bare path.
 

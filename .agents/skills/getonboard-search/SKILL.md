@@ -111,7 +111,7 @@ category, salary (when listed), posting date, and apply link.
 ## Usage examples
 
 ```bash
-# React roles anywhere GetOnBoard covers (this candidate's core stack)
+# React roles anywhere GetOnBoard covers (React used here as an example skill)
 bun run .agents/skills/getonboard-search/cli/src/cli.ts search -q "react" --format table
 
 # React roles, filtered to Buenos Aires
