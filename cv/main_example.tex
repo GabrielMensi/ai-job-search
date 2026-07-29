@@ -2,57 +2,79 @@
 %% Comprehensive overview of all competencies, experience, and achievements.
 %% Use as a master reference when tailoring role-specific CVs.
 %%
+%% Template: harvard (see templates/cv/harvard/TEMPLATE.md)
 %% Compile with: lualatex main_example.tex
-%% (pdflatex often fails on modern MiKTeX with fontawesome5 font-expansion errors.)
 
-\documentclass[11pt,a4paper,sans]{moderncv}
-\moderncvstyle{banking}
-\moderncvcolor{blue}
+\documentclass[10.5pt,a4paper]{article}
 
-% Force both first and last name AND section headings to render in moderncv
-% blue (color1). Default banking on lualatex+MiKTeX leaves these black, which
-% looks inconsistent with the rest of the blue accent scheme.
-\renewcommand*{\firstnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
-\renewcommand*{\lastnamestyle}[1]{{\fontsize{34}{36}\bfseries\upshape\color{color1}#1}}
-\renewcommand*{\sectionstyle}[1]{{\sectionfont\color{color1}#1}}
-
+\usepackage[margin=0.75in]{geometry}
+\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage{charter}
+\usepackage{titlesec}
+\usepackage{enumitem}
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
-    linkcolor=blue,
-    filecolor=magenta,
-    urlcolor=blue,
+    linkcolor=black,
+    urlcolor=black,
     pdftitle={[YOUR_NAME] - CV},
-    pdfpagemode=FullScreen,
+    pdfpagemode=UseNone,
 }
-\usepackage[scale=0.80]{geometry}
-\usepackage{import}
 
-% personal data
-\name{Gabriel}{Mensi}
-\address{Rosario, Argentina}{}{}
-\phone[mobile]{[YOUR_PHONE]}
-\email{[YOUR_EMAIL]}
-\extrainfo{\href{https://www.linkedin.com/in/gabriel-mensi/}{LinkedIn}, \href{https://github.com/GabrielMensi}{GitHub}}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+
+\titleformat{\section}{\normalsize\bfseries}{}{0pt}{}[{\titlerule[0.6pt]}]
+\titlespacing*{\section}{0pt}{9pt}{5pt}
+
+\setlist[itemize]{leftmargin=14pt, itemsep=1pt, topsep=1pt, parsep=0pt}
+
+\newcommand{\cvheaderline}[2]{\textbf{#1} \hfill #2\\}
+\newcommand{\cvsubheaderline}[2]{\textit{#1} \hfill \textit{#2}\\[1pt]}
+\newcommand{\cvlink}[2]{\href{#1}{\underline{#2}}}
 
 \begin{document}
 
-\makecvtitle
+% ============================================================
+%     HEADER
+% ============================================================
+\begin{center}
+{\LARGE \bfseries [YOUR_NAME]}\\[3pt]
+Rosario, Argentina \textbullet\ \cvlink{mailto:[YOUR_EMAIL]}{[YOUR_EMAIL]} \textbullet\ [YOUR_PHONE] \textbullet\ \cvlink{https://www.linkedin.com/in/gabriel-mensi/}{LinkedIn} \textbullet\ \cvlink{https://github.com/GabrielMensi}{GitHub}
+\end{center}
+\vspace{2pt}
+{\titlerule[0.6pt]}
+\vspace{5pt}
 
 % ============================================================
-%     PROFILE STATEMENT
+%     1. PROFILE STATEMENT (no section heading, by design)
 % ============================================================
+\noindent Frontend Software Engineer with 4 years leading frontend delivery on close to 20 production projects for clients across automotive, fintech, industrial, and wealth management (Toyota, Lexus, Sullair, Veritran). Specialized in Next.js, React, and CMS-driven architectures -- co-designed my agency's migration from monolithic Django templates to a decoupled Next.js + headless CMS stack, implementing its pilot project and defining the standard later replicated across four more projects. Builds the foundational systems -- normalization layers, reusable component systems, performance optimizations -- that make everything else faster to ship.
 
-\vspace{6pt}
-\small{Frontend Software Engineer with 4 years leading frontend delivery on close to 20 production projects for clients across automotive, fintech, industrial, and wealth management (Toyota, Lexus, Sullair, Veritran). Specialized in Next.js, React, and CMS-driven architectures -- co-designed my agency's migration from monolithic Django templates to a decoupled Next.js + headless CMS stack, implementing its pilot project and defining the standard later replicated across four more projects. Builds the foundational systems -- normalization layers, reusable component systems, performance optimizations -- that make everything else faster to ship.}
+\vspace{2pt}
 
 % ============================================================
-%     CORE COMPETENCIES
+%     2. PROFESSIONAL EXPERIENCE
 % ============================================================
+\section{Professional Experience}
 
+\cvheaderline{EGO Design}{Buenos Aires, AR -- Remote}
+\cvsubheaderline{Frontend Software Engineer}{2022--Present}
+\begin{itemize}
+    \item Built the frontend end-to-end for close to 20 production projects -- architecture, implementation, and testing -- across automotive, fintech, industrial, and wealth-management clients (Toyota, Lexus, Sullair, Veritran), working daily inside multidisciplinary product teams.
+    \item Co-designed, alongside the CTO, the agency's frontend architecture migration from a monolithic Django+Wagtail stack to a decoupled model (Next.js + Django/Wagtail multi-tenant headless backend); implemented the pilot project (Mitta.cl) and defined the technical guidelines later replicated across 4 more projects.
+    \item Designed and implemented a normalization layer (Django REST/Python $\rightarrow$ TypeScript/Next.js) standardizing backend responses, cutting delivery cycles from months to weeks.
+    \item Built a CMS-driven dynamic component system (instantiation, routing, SEO/meta tags, menus, translations, previews) giving non-technical teams full control over page content.
+    \item Delivered a 90\% reduction in initial bundle size (5.5MB $\rightarrow$ 400KB) and raised Core Web Vitals scores from 45 to 90+ on Mitta.cl through icon-system migration and deferred third-party script loading.
+    \item Led an in-house technical SEO/AEO/GEO report on Mitta.cl, including detecting and fixing AI bots blocked by a robots.txt misconfiguration.
+    \item Implemented complex business flows -- multi-step quote engines, payment integrations (Transbank/Webpay), JWT-based authentication, and global state management (Redux Toolkit, Zustand) -- across automotive, fintech, and industrial clients.
+\end{itemize}
+
+% ============================================================
+%     3. CORE COMPETENCIES
+% ============================================================
 \section{Core Competencies}
-\vspace{1pt}
 \begin{itemize}
 
 \item \textbf{Frontend Architecture \& Next.js}: Next.js (versions 10--16), React, React Hooks, TypeScript -- decoupled/headless architecture design, from monolithic-to-Next.js migrations to reusable component systems.
@@ -68,58 +90,16 @@
 \end{itemize}
 
 % ============================================================
-%     PROFESSIONAL EXPERIENCE
+%     4. EDUCATION
 % ============================================================
-
-\section{Professional Experience}
-\vspace{3pt}
-\begin{itemize}
-
-\item{\cventry{2022--Present}{Frontend Software Engineer}{EGO Design}{Buenos Aires, AR -- Remote}{}{\vspace{1pt}
-\begin{itemize}
-    \item Built the frontend end-to-end for close to 20 production projects -- architecture, implementation, and testing -- across automotive, fintech, industrial, and wealth-management clients (Toyota, Lexus, Sullair, Veritran), working daily inside multidisciplinary product teams.
-    \item Co-designed, alongside the CTO, the agency's frontend architecture migration from a monolithic Django+Wagtail stack to a decoupled model (Next.js + Django/Wagtail multi-tenant headless backend); implemented the pilot project (Mitta.cl) and defined the technical guidelines later replicated across 4 more projects.
-    \item Designed and implemented a normalization layer (Django REST/Python $\rightarrow$ TypeScript/Next.js) standardizing backend responses, cutting delivery cycles from months to weeks.
-    \item Built a CMS-driven dynamic component system (instantiation, routing, SEO/meta tags, menus, translations, previews) giving non-technical teams full control over page content.
-    \item Delivered a 90\% reduction in initial bundle size (5.5MB $\rightarrow$ 400KB) and raised Core Web Vitals scores from 45 to 90+ on Mitta.cl through icon-system migration and deferred third-party script loading.
-    \item Led an in-house technical SEO/AEO/GEO report on Mitta.cl, including detecting and fixing AI bots blocked by a robots.txt misconfiguration.
-    \item Implemented complex business flows -- multi-step quote engines, payment integrations (Transbank/Webpay), JWT-based authentication, and global state management (Redux Toolkit, Zustand) -- across automotive, fintech, and industrial clients.
-\end{itemize}}}
-
-\end{itemize}
-
-% ============================================================
-%     EDUCATION
-% ============================================================
-
 \section{Education}
-\vspace{1pt}
-\begin{itemize}
-
-\item{\cventry{2021--2023}{Bachelor's in Information Systems Engineering (coursework)}{Universidad Tecnológica Nacional -- Facultad Regional Rosario}{Rosario, AR}{}{\vspace{1pt}
-Coursework completed; degree not finalized.
-}}
-
-\end{itemize}
+\cvheaderline{Universidad Tecnológica Nacional -- Facultad Regional Rosario}{Rosario, AR}
+\cvsubheaderline{Bachelor's in Information Systems Engineering (coursework)}{2021--2023}
 
 % ============================================================
-%     LANGUAGES
+%     5. LANGUAGES
 % ============================================================
-
 \section{Languages}
-\vspace{1pt}
-\begin{itemize}
-\item Spanish (native), English (B1/B2, professional working proficiency).
-\end{itemize}
-
-% ============================================================
-%     REFERENCES
-% ============================================================
-
-\section{References}
-\vspace{1pt}
-\begin{itemize}
-\item{Available upon request.}
-\end{itemize}
+\noindent Spanish (native), English (B1/B2, professional working proficiency).
 
 \end{document}

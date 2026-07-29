@@ -4,6 +4,19 @@ framework_version: 1.2.1
 
 # CV Templates and Tailoring Guide
 
+<!-- BEGIN ACTIVE-TEMPLATE (managed by /add-template - do not edit by hand) -->
+> **Active template override: `harvard`**
+>
+> A custom template is active. Where this block conflicts with the stock guidance below, this block wins. Structural advice below (tailoring, page-budget, cutting rules) still applies.
+>
+> - **Template skeleton:** `templates/cv/harvard/template.tex` — use this as the structural reference instead of the stock template
+> - **Manifest:** `templates/cv/harvard/TEMPLATE.md` — read this for style rules and known pitfalls before drafting
+> - **Compile with:** `lualatex` (not the engine named in the stock guidance below)
+> - **Fonts:** Bitstream Charter (`charter` package, standard TeX Live font)
+> - **Page limit:** exactly 1 page(s)
+> - **Output file:** unchanged (`cv/main_<company>_<role>.tex`); copy any class/font files the template needs into the output directory, or reference them by relative path
+<!-- END ACTIVE-TEMPLATE -->
+
 <!-- SETUP: Profile statements and section ordering are personalized by running /setup -->
 
 ## Template: LaTeX moderncv (Banking Style)
