@@ -1,119 +1,117 @@
 # Search Queries for Job Scraper
 
-<!-- SETUP: Customize these queries based on your skills, target roles, and location -->
+<!-- SETUP: Customize the [PLACEHOLDER] queries below based on your skills, target roles, and location -->
 
 ## Installed portal CLIs (primary for `/scrape`)
 
-`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search` and `freehire-search`; Danish demos and any skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
+`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search` and `freehire-search`. This fork additionally ships four Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
-**Language scope: English and Spanish only.** Queries below are written in both languages since target postings split across the two — English for international/remote-first roles, Spanish for the LatAm-local market (GetOnBoard, Computrabajo, Bumeran, Zonajobs). A posting requiring a third language as a job condition (not just written in one) is a deal-breaker — see CLAUDE.md's Deal-breakers list and `04-job-evaluation.md`'s Deal-Breaker Gate.
+**Language scope:** default to writing every query category in **English and Spanish**, the two languages most LatAm/international tech postings use — adjust this (e.g. add Portuguese if you're in Brazil) to match the languages in your own CLAUDE.md profile. A posting requiring a third language as a job condition (not just written in one) is a deal-breaker — see CLAUDE.md's Deal-breakers list and `04-job-evaluation.md`'s Deal-Breaker Gate. Translate each category's keywords rather than machine-translating word-for-word (e.g. "Frontend Developer" -> "Desarrollador Frontend", not a literal word-for-word translation).
 
 ## Search Sites
 
 Primary (your market's job boards):
-- **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain); covered by the `getonboard-search` CLI. Postings skew Chile-heavy but include Argentina/Buenos Aires listings. Bilingual EN/ES postings.
-- **linkedin.com/jobs** - LinkedIn job listings (remote / Argentina); also covered by `linkedin-search` CLI
-- **freehire.me** - covered by the `freehire-search` CLI (country-agnostic)
-- **ar.computrabajo.com (Computrabajo)** - Argentina; covered by the `computrabajo-search` CLI. Server-rendered, path-segment search (no query string), good multi-word query support.
-- **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela, this skill scopes to `.ar`); covered by the `bumeran-search` CLI. Client-rendered SPA behind a JSON API; single-keyword queries work best, multi-word queries tend to return 0 results.
-- **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Same backend/search index as Bumeran (Navent group) - the CLI filters out cross-posted Bumeran results automatically. Same single-keyword-query quirk as Bumeran.
+- **[YOUR_JOB_BOARD]** - your market's largest general job board (scaffold one with `/add-portal` if not already covered below)
+- **linkedin.com/jobs** - LinkedIn job listings (filter: [YOUR_COUNTRY] / [YOUR_CITY]); also covered by `linkedin-search` CLI
+- **[YOUR_INDUSTRY_JOB_BOARD]** - a niche/industry board for your field (optional)
+
+Argentina/LatAm portals shipped with this fork:
+- **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain); covered by the `getonboard-search` CLI. Bilingual EN/ES postings.
+- **ar.computrabajo.com (Computrabajo)** - Argentina (also spans ~20 other countries - swap the CLI's base URL if yours differs); covered by the `computrabajo-search` CLI. Server-rendered, good multi-word query support.
+- **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela); covered by the `bumeran-search` CLI. Single-keyword queries work best.
+- **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Shares a search index with Bumeran (Navent group) - the CLI filters out cross-posted duplicates automatically. Single-keyword queries work best.
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
 
 ## Query Categories
 
-Queries are grouped by priority. Location scope is "remote worldwide" by default - combine with "remote"/"remoto" or "Argentina" rather than a specific city where the site supports it.
+Queries are grouped by priority. Write **each category in both English and Spanish** (see Language scope above). Combine each query with your location terms where the site supports it.
 
-### Priority 1: Frontend Software Engineer (Next.js / React)
+### Priority 1: [YOUR_PRIMARY_ROLE_TYPE]
 
 These match your strongest and most desired career direction.
 
 **English:**
 ```
-"Frontend Software Engineer" Next.js remote
-"Frontend Developer" React remote
-"React Developer" OR "Next.js Developer" remote
-site:linkedin.com/jobs "Senior Frontend Engineer" remote
-site:getonbrd.com "React" frontend
+"[YOUR_PRIMARY_JOB_TITLE]" [YOUR_KEY_SKILL] remote
+site:linkedin.com/jobs "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_COUNTRY]
+site:getonbrd.com "[YOUR_KEY_SKILL]" [YOUR_PRIMARY_ROLE_TYPE]
 ```
 
 **Spanish:**
 ```
-"Desarrollador Frontend" React remoto
-"Desarrollador Frontend Senior" Next.js remoto
-"Programador Frontend" React OR Next.js remoto
-site:linkedin.com/jobs "Desarrollador Frontend Senior" remoto
-site:getonbrd.com "Next.js" OR "React" desarrollador remote
+"[YOUR_PRIMARY_JOB_TITLE_ES]" [YOUR_KEY_SKILL] remoto
+site:linkedin.com/jobs "[YOUR_PRIMARY_JOB_TITLE_ES]" remoto
+site:getonbrd.com "[YOUR_KEY_SKILL]" desarrollador remote
 ```
 
-### Priority 2: CMS-driven / headless architecture
+### Priority 2: [YOUR_DOMAIN_EXPERTISE]
 
 These match your domain expertise.
 
 **English:**
 ```
-"headless CMS" Next.js frontend remote
-Django Wagtail Next.js frontend developer
-"frontend architecture" Next.js remote
-site:linkedin.com/jobs Wagtail OR "headless CMS" frontend
+site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] OR [YOUR_REGION]
+site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_2] [YOUR_COUNTRY]
+site:linkedin.com/jobs [YOUR_DOMAIN_KEYWORD_1] [YOUR_CITY] [YOUR_COUNTRY]
 ```
 
 **Spanish:**
 ```
-"CMS headless" Next.js frontend remoto
-Django Wagtail Next.js desarrollador frontend
-"arquitectura frontend" Next.js remoto
-site:linkedin.com/jobs Wagtail OR "CMS headless" frontend
+site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_1_ES] [YOUR_CITY] OR [YOUR_REGION]
+site:[YOUR_JOB_BOARD] [YOUR_DOMAIN_KEYWORD_2_ES] remoto
+site:linkedin.com/jobs [YOUR_DOMAIN_KEYWORD_1_ES] remoto
 ```
 
-### Priority 3: Full Stack Engineer
+### Priority 3: [YOUR_ADJACENT_ROLE_TYPE]
 
 Adjacent roles you could pivot into.
 
 **English:**
 ```
-"Full Stack Engineer" Next.js Django remote
-"Full Stack Developer" React Python remote
+site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_1]" [YOUR_KEY_SKILL] [YOUR_CITY]
+site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_2]" [YOUR_KEY_SKILL] [YOUR_CITY]
 ```
 
 **Spanish:**
 ```
-"Desarrollador Full Stack" Next.js Django remoto
-"Programador Full Stack" React Python remoto
+site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_1_ES]" [YOUR_KEY_SKILL] remoto
+site:[YOUR_JOB_BOARD] "[YOUR_ADJACENT_TITLE_2_ES]" [YOUR_KEY_SKILL] remoto
 ```
 
-### Priority 4: Broader Technical / Agency Consulting
+### Priority 4: Broader Technical / Consulting
 
 Wider net for general technical roles.
 
 **English:**
 ```
-TypeScript developer remote
-"technical consultant" frontend Next.js remote
-frontend engineer agency Next.js remote
+site:[YOUR_JOB_BOARD] [YOUR_KEY_SKILL] developer [YOUR_CITY]
+site:linkedin.com/jobs "[YOUR_KEY_SKILL] developer" [YOUR_CITY]
+site:[YOUR_JOB_BOARD] "technical consultant" [YOUR_DOMAIN] [YOUR_CITY]
 ```
 
 **Spanish:**
 ```
-desarrollador TypeScript remoto
-"consultor técnico" frontend Next.js remoto
-desarrollador frontend agencia Next.js remoto
+site:[YOUR_JOB_BOARD] desarrollador [YOUR_KEY_SKILL] remoto
+site:linkedin.com/jobs "desarrollador [YOUR_KEY_SKILL]" remoto
+site:[YOUR_JOB_BOARD] "consultor técnico" [YOUR_DOMAIN] remoto
 ```
 
 ## Location Filter
 
-Geographic scope is **remote worldwide** (confirmed during `/setup`) - candidate is based in Rosario, Argentina and open to remote/hybrid roles globally, with no return-to-office mandate. Define acceptable areas:
-- Remote (any country) - ideal
-- Hybrid or on-site in Rosario or Buenos Aires, Argentina - acceptable
-- On-site elsewhere in Argentina - borderline, discuss relocation/commute before proceeding
-- On-site outside Argentina requiring relocation, or any role with a return-to-office mandate - too far / deal-breaker
+When evaluating results, verify the job location is within reasonable commute distance from your home, or matches your remote-work scope. Define acceptable areas:
+- [YOUR_CITY] and surrounding areas
+- [ACCEPTABLE_AREA_1]
+- [ACCEPTABLE_AREA_2]
+- [BORDERLINE_AREA] (borderline - ~X min by transit)
+- [TOO_FAR_AREA] (too far)
 
 ## Language Filter (Deal-Breaker)
 
-The candidate works in English and Spanish only. A posting that **requires** proficiency in a third language as a condition of the role (not just written in one - e.g. "fluent Polish required," "must communicate with the Warsaw team in Russian") is a deal-breaker per CLAUDE.md and `04-job-evaluation.md`'s Deal-Breaker Gate - exclude it, or if already surfaced, mark it clearly as a deal-breaker rather than scoring it on skills alone. Postings simply *written* in Spanish, or in a third language the candidate doesn't need to use on the job, are fine.
+State your own working languages here (default assumption for this fork: **English and Spanish**). A posting that **requires** proficiency in a third language as a condition of the role (not just written in one - e.g. "fluent Polish required," "must communicate with the Warsaw team in Russian") is a deal-breaker per CLAUDE.md and `04-job-evaluation.md`'s Deal-Breaker Gate - exclude it, or if already surfaced, mark it clearly as a deal-breaker rather than scoring it on skills alone. Postings simply *written* in a language you don't work in, that don't require it on the job, are fine.
 
 ## Date Filter
 
