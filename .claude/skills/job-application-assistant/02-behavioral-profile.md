@@ -20,13 +20,13 @@ framework_version: 1.0.0
 | [DRIVE_4] | [LEVEL] | [DESCRIPTION] |
 
 ## Strongest Behaviors
-- **Systems/infrastructure-oriented:** *[Inferred from LinkedIn About - review before relying on this]* Gravitates toward building the "boring-sounding infrastructure that makes everything else fast to build on top of" - normalization layers, reusable component systems, CMS integrations.
-- **Ownership-driven:** *[Inferred from LinkedIn About - review before relying on this]* Took technical ownership of architecture, implementation, and optimization across ~20 production projects; co-led a company-wide architecture migration alongside the CTO.
-- **Adaptable across contexts:** *[Inferred from LinkedIn About / GitHub README - review before relying on this]* Comfortable moving across stacks (Next.js, Django/Wagtail, Laravel, Express+GraphQL) and industries (automotive, fintech, industrial, wealth management) without a narrow specialization.
+- **[BEHAVIOR_1]:** [DESCRIPTION]
+- **[BEHAVIOR_2]:** [DESCRIPTION]
+- **[BEHAVIOR_3]:** [DESCRIPTION]
 
 ## How You Work Best
-- *[Inferred from LinkedIn About - review before relying on this]* Motivated by building foundational systems that compound - patterns and layers that get replicated across future projects, not one-off features.
-- *[Inferred from LinkedIn About / GitHub README - review before relying on this]* Thrives working closely with technical leadership (e.g. co-designing architecture decisions with a CTO) rather than just executing a handed-down spec.
+- [ENVIRONMENT_PREFERENCE_1]
+- [ENVIRONMENT_PREFERENCE_2]
 - [ENVIRONMENT_PREFERENCE_3]
 
 ## Growth Areas (frame positively in applications)

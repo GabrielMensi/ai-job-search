@@ -4,19 +4,6 @@ framework_version: 1.2.1
 
 # CV Templates and Tailoring Guide
 
-<!-- BEGIN ACTIVE-TEMPLATE (managed by /add-template - do not edit by hand) -->
-> **Active template override: `harvard`**
->
-> A custom template is active. Where this block conflicts with the stock guidance below, this block wins. Structural advice below (tailoring, page-budget, cutting rules) still applies.
->
-> - **Template skeleton:** `templates/cv/harvard/template.tex` — use this as the structural reference instead of the stock template
-> - **Manifest:** `templates/cv/harvard/TEMPLATE.md` — read this for style rules and known pitfalls before drafting
-> - **Compile with:** `lualatex` (not the engine named in the stock guidance below)
-> - **Fonts:** Bitstream Charter (`charter` package, standard TeX Live font)
-> - **Page limit:** exactly 1 page(s)
-> - **Output file:** unchanged (`cv/main_<company>_<role>.tex`); copy any class/font files the template needs into the output directory, or reference them by relative path
-<!-- END ACTIVE-TEMPLATE -->
-
 <!-- SETUP: Profile statements and section ordering are personalized by running /setup -->
 
 ## Template: LaTeX moderncv (Banking Style)
@@ -128,11 +115,12 @@ When the role sits outside your home domain, **lead with the domain-transfer arg
 
 **Create 2-3 profile statement templates for your main role types:**
 
-**For Frontend Software Engineer (Next.js/React) roles:**
-> Frontend Software Engineer with 4 years leading frontend delivery on close to 20 production projects for clients across automotive, fintech, industrial, and wealth management (Toyota, Lexus, Sullair, Veritran). Specialized in Next.js, React, and CMS-driven architectures - co-designed my agency's migration to a decoupled Next.js + headless Django/Wagtail stack and implemented its pilot project. Delivered a 90% bundle-size reduction and doubled Core Web Vitals scores through hands-on performance engineering, and built the normalization layers and component systems that made every subsequent project faster to ship.
+<!-- SETUP: These are populated based on your background -->
+**For [YOUR_PRIMARY_ROLE_TYPE] roles:**
+> [YOUR_PROFILE_STATEMENT_TEMPLATE_1]
 
-**For Technical Lead / Architecture-focused roles:**
-> Frontend engineer who co-designed, alongside a CTO, an agency-wide migration from monolithic Django templates to a decoupled Next.js + headless CMS architecture - implementing the pilot project and defining the technical standard later replicated across 4 more production projects. I look for the infrastructure-level problem behind a feature request: a normalization layer that cut delivery cycles from months to weeks, a CMS-driven component system that gave non-technical teams full page control. I pair that architectural thinking with hands-on delivery across close to 20 production projects.
+**For [YOUR_SECONDARY_ROLE_TYPE] roles:**
+> [YOUR_PROFILE_STATEMENT_TEMPLATE_2]
 
 Statements labeled *[Used for: <company>_<role>]* were extracted from archived application drafts by `/setup` Path A. They are **phrasing references, never fact sources**: when drafting from one, every factual claim still comes from `01-candidate-profile.md` - a past tailored draft does not vouch for its own accuracy.
 
