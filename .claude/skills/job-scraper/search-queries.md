@@ -4,7 +4,7 @@
 
 ## Installed portal CLIs (primary for `/scrape`)
 
-`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search` and `freehire-search`. This fork additionally ships four Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
+`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search`, `freehire-search`, and `himalayas-search`. This fork additionally ships four Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
@@ -15,6 +15,7 @@ The `site:` query templates in this file are the **WebSearch fallback** — for 
 Primary (your market's job boards):
 - **[YOUR_JOB_BOARD]** - your market's largest general job board (scaffold one with `/add-portal` if not already covered below)
 - **linkedin.com/jobs** - LinkedIn job listings (filter: [YOUR_COUNTRY] / [YOUR_CITY]); also covered by `linkedin-search` CLI
+- **himalayas.app** - global remote-jobs board with a public, documented JSON API (no auth); country-filterable (e.g. `country=AR`); covered by the `himalayas-search` CLI
 - **[YOUR_INDUSTRY_JOB_BOARD]** - a niche/industry board for your field (optional)
 
 Argentina/LatAm portals shipped with this fork:

@@ -1,22 +1,25 @@
 # Future portal candidates (Argentina / LatAm)
 
-Not built yet — research notes for later `/add-portal` work, alongside the 4 already installed
-(GetOnBoard, Computrabajo, Bumeran, Zonajobs).
+Not built yet — research notes for later `/add-portal` work, alongside the 6 already installed
+(GetOnBoard, Computrabajo, Bumeran, Zonajobs, Himalayas, plus the pre-existing LinkedIn/freehire).
 
-## Priority alta (verificados, buena señal)
+## Construidos desde que se armó esta lista
 
-- **Indeed Argentina** (ar.indeed.com) — agregador global grande, interfaz en español, filtro de
-  remoto ("remoto"/"desde casa") y filtro de sueldo en dólares. El más sólido de los tres.
-- **Himalayas.app** (filtrado a Argentina: `himalayas.app/jobs/countries/argentina`) — portal de
-  trabajo remoto internacional, ~2.500 ofertas activas para Argentina al momento de chequear
-  (julio 2026), filtros por skill/seniority/salario. Renderizado híbrido (contenido real en el
-  HTML inicial) — más fácil de scrapear que una SPA pura.
-- **WeRemoto** (weremoto.com) — agregador de remoto para toda LatAm, con categoría IT específica.
-  Confirmado bien server-rendered (nada de SPA), con empresas reconocibles (Cloudbeds, Twilio,
-  HubSpot) — probablemente el más simple de scrapear de los tres.
+- **Himalayas.app** — ✅ construido (`himalayas-search`). Mejor de lo esperado: tiene API JSON
+  pública y documentada (`/jobs/api`, OpenAPI spec, licencia "free to use with attribution"), sin
+  necesidad de scrapear HTML. País Argentina confirmado con 2.642 avisos activos.
+- **Indeed Argentina** — ❌ intentado, **bloqueado técnicamente**. Cloudflare exige un challenge
+  interactivo (JS real) hasta en la página de inicio, no solo en la búsqueda — un CLI liviano
+  (`bun`+`fetch`, sin dependencias, como usan todos los portales de este framework) no lo puede
+  resolver. Requeriría un navegador headless (arquitectura completamente distinta, y encima poco
+  confiable porque el challenge es adaptativo) — no se descarta para siempre, pero es una decisión
+  de arquitectura aparte, no un simple `/add-portal` más.
 
 ## Prioridad media (mencionados, sin verificar en profundidad)
 
+- **WeRemoto** (weremoto.com) — agregador de remoto para toda LatAm, con categoría IT específica.
+  Confirmado bien server-rendered (nada de SPA), con empresas reconocibles (Cloudbeds, Twilio,
+  HubSpot) — buena señal para scrapear, sin investigar API/robots.txt todavía.
 - **Portal Empleo** (portal de empleo del gobierno argentino) — volumen grande (~53.000 empresas
   registradas según lo relevado), pero probablemente mucho ruido para roles senior de tech.
 - **Torre.co** — marketplace de talento remoto LatAm, aparece mencionado seguido como alternativa
