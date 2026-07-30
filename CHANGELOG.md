@@ -13,6 +13,15 @@ per-file diff commands.
 
 ## [Unreleased]
 
+- **README: the extension model, documented** - new Customization subsection "Extending the
+  framework: portals, templates, criteria - and borrowing from other forks". States plainly
+  what was previously folklore: the three extension points (portal skills with their
+  auto-discovered contract, `/add-template` toolchains, free-form evaluation criteria), the
+  copy-one-folder pattern for borrowing a portal skill from another fork with a
+  read-the-code-first checklist, and why there is deliberately no installer (the manual copy
+  is the security model). Documentation only - no behavior changes. Prompted by the
+  extension-system question in discussion #249.
+
 - **freehire-search: full descriptions come back with the search** - `search` now calls
   freehire's agent search endpoint (`/api/v1/agent/jobs/search`), which serves each hit's
   complete description instead of the search index's truncated preview. A 20-role search is
