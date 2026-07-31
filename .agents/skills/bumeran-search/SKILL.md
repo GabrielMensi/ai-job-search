@@ -64,9 +64,17 @@ bun run .agents/skills/bumeran-search/cli/src/cli.ts search [flags]
 ```
 
 Key flags:
-- `--query <text>` / `-q <text>` — keyword search. **Use a single keyword.** Multi-word
-  queries (e.g. `"desarrollador frontend"`) reliably return **zero results** on this portal —
-  verified live. `"react"` and `"desarrollador"` alone both return real, on-topic results.
+- `--query <text>` / `-q <text>` — keyword search, matched as an AND-of-terms against posting
+  titles (every word in `--query` must appear in a title). **Prefer a concrete technology name
+  over a role-category English word**: `"react"`, `"javascript"`, `"typescript"`,
+  `"desarrollador"`, `"programador"`, `"developer"`, `"senior"`, `"full stack"` all reliably
+  return real results — verified live. `"frontend"` (in any spelling — `"frontend"`,
+  `"front end"`, `"front-end"`) has repeatedly returned **zero** results, including on a retest
+  months after this skill was first built, so this looks like a stable naming-convention gap
+  (titles here skew toward naming the stack) rather than a one-off dip in listings. Combining
+  `"frontend"` with any other word (e.g. `"desarrollador frontend"`) also returns zero, since
+  the AND-match fails on that one word alone. Result counts for any word will drift as listings
+  churn day to day — re-probe with this CLI before trusting an old number.
 - `--location <text>` / `-l <text>` — city/region text, e.g. `"Buenos Aires"`, `"Rosario"`.
   Applied as a **client-side filter** over each result's location text — no working
   server-side location parameter was found (see `url-reference.md`). Combine with `--query`
@@ -122,8 +130,11 @@ All errors are written to **stderr** as `{ "error": "...", "code": "..." }` and 
 - Data comes from Bumeran's own backend JSON API (same origin, no separate `api.` subdomain),
   called directly — no credentials required, but every call needs a Cloudflare session cookie
   (this CLI fetches one automatically per run) plus an `x-site-id: BMAR` header.
-- **Use single-keyword queries.** Multi-word `--query` values reliably return zero results —
-  a real portal quirk, not a bug in this CLI (verified live; see `url-reference.md`).
+- **Prefer a technology name over a role-category English word.** `--query` is an AND-of-terms
+  match against posting titles — see the flag note above. `"frontend"` reliably returns zero
+  (a real portal quirk, not a bug in this CLI — verified live, see `url-reference.md`), while
+  `"react"`, `"developer"`, `"desarrollador"`, and even multi-word phrases like `"full stack"`
+  work fine.
 - **`--location` is a client-side filter**, not a portal search parameter — this CLI tried a
   server-side `filtros` location facet (even with a real, verified semantic location ID) and
   it 400'd. Combine with `--query` for best results.

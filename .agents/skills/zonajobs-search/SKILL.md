@@ -86,15 +86,26 @@ Key flags:
 - `--limit <n>` / `-n <n>` — cap total results emitted (client-side).
 - `--format json|table|plain` — default `json`.
 
-> **How search actually works**: Zonajobs' `query` parameter matches as a
-> **substring/phrase against posting titles**, not a tokenized full-text
-> search over the whole posting. A common single word appearing in lots of
-> titles (`desarrollador`) returns many results; a multi-word phrase only
-> matches when it appears **verbatim** in a title, so natural-language
-> queries like `"desarrollador frontend"` or `"front end"` return **zero**
-> results even though relevant postings exist (they just say "Frontend" as
-> one word, not "front end"). Prefer single keywords. See `url-reference.md`
-> for the live probes that established this.
+> **How search actually works**: Zonajobs' `query` parameter matches
+> **against posting titles**, not a full-text search over the whole
+> posting — it behaves like an AND-of-terms match, so *every* word in
+> `--query` must appear in a title for a result to match. This makes the
+> query only as good as its weakest word. **Prefer a concrete technology
+> name over a role-category English word**: `"react"`, `"javascript"`,
+> `"typescript"`, `"desarrollador"`, `"programador"`, `"developer"`,
+> `"senior"`, `"full stack"` all reliably return real results. `"frontend"`
+> (in any spelling — `"frontend"`, `"front end"`, `"front-end"`) has
+> repeatedly returned **zero** results in live testing, including on a
+> retest months after this skill was first built — titles here skew
+> toward naming the stack (`"Desarrollador React"`) rather than the role
+> category, and that's apparently stable over time, not a one-off gap in
+> the listings. Combining `"frontend"` with any other word (e.g.
+> `"desarrollador frontend"`) also returns zero, since the AND-match fails
+> on that one word alone. **Result counts for any given word will drift
+> as listings churn day to day** — re-probe with the portal's own CLI
+> before trusting an old number, rather than assuming today's guidance is
+> permanently accurate. See `url-reference.md` for the live probes that
+> established this.
 
 ### Fetch full job detail
 

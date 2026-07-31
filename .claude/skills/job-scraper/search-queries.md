@@ -21,8 +21,8 @@ Primary (your market's job boards):
 Argentina/LatAm portals shipped with this fork:
 - **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain); covered by the `getonboard-search` CLI. Bilingual EN/ES postings.
 - **ar.computrabajo.com (Computrabajo)** - Argentina (also spans ~20 other countries - swap the CLI's base URL if yours differs); covered by the `computrabajo-search` CLI. Server-rendered, good multi-word query support.
-- **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela); covered by the `bumeran-search` CLI. Single-keyword queries work best.
-- **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Shares a search index with Bumeran (Navent group) - the CLI filters out cross-posted duplicates automatically. Single-keyword queries work best.
+- **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela); covered by the `bumeran-search` CLI. `--query` is an AND-of-terms match against posting titles - use a technology name (`"react"`, `"desarrollador"`), not a role-category English word like `"frontend"`, which reliably returns 0 - see the CLI's `SKILL.md` for why.
+- **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Shares a search index with Bumeran (Navent group) - the CLI filters out cross-posted duplicates automatically. Same query quirk as Bumeran.
 - **empleosit.com.ar (Empleos IT)** - Argentina only, IT/tech-focused board (every listing is a tech role, unlike the general-purpose boards above); covered by the `empleosit-search` CLI. Server-rendered, no API. Posting dates are absolute (`DD/MM/YYYY`), so `--jobage` filtering is exact rather than best-effort.
 
 Secondary (company career pages via Google):
