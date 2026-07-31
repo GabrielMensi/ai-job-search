@@ -4,7 +4,7 @@
 
 ## Installed portal CLIs (primary for `/scrape`)
 
-`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search`, `freehire-search`, and `himalayas-search`. This fork additionally ships four Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
+`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search`, `freehire-search`, and `himalayas-search`. This fork additionally ships five Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search`, `empleosit-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
@@ -23,6 +23,7 @@ Argentina/LatAm portals shipped with this fork:
 - **ar.computrabajo.com (Computrabajo)** - Argentina (also spans ~20 other countries - swap the CLI's base URL if yours differs); covered by the `computrabajo-search` CLI. Server-rendered, good multi-word query support.
 - **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela); covered by the `bumeran-search` CLI. Single-keyword queries work best.
 - **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Shares a search index with Bumeran (Navent group) - the CLI filters out cross-posted duplicates automatically. Single-keyword queries work best.
+- **empleosit.com.ar (Empleos IT)** - Argentina only, IT/tech-focused board (every listing is a tech role, unlike the general-purpose boards above); covered by the `empleosit-search` CLI. Server-rendered, no API. Posting dates are absolute (`DD/MM/YYYY`), so `--jobage` filtering is exact rather than best-effort.
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
