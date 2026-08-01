@@ -13,6 +13,14 @@ per-file diff commands.
 
 ## [Unreleased]
 
+- **Dynamic per-user language deal-breaker gate** - `/setup` now captures every language you
+  work in with your proficiency level as a structured table in CLAUDE.md / `01-candidate-profile.md`,
+  replacing the old hardcoded English/Spanish default. `04-job-evaluation.md`'s Deal-Breaker Gate
+  (used by `/apply`, `/rank`, and `/scrape`) now hard-rejects postings requiring a language you
+  haven't declared at all, and flags - rather than auto-rejects - postings asking for a higher
+  level than you declared in a language you do work in, so borderline cases get your judgment
+  instead of a silent drop.
+
 - **freehire-search: full descriptions come back with the search** - `search` now calls
   freehire's agent search endpoint (`/api/v1/agent/jobs/search`), which serves each hit's
   complete description instead of the search index's truncated preview. A 20-role search is

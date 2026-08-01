@@ -1,5 +1,5 @@
 ---
-framework_version: 1.1.0
+framework_version: 1.2.0
 ---
 
 # Job Evaluation Framework
@@ -32,9 +32,21 @@ A role that fails this gate is not scored and not drafted. Everything below appl
 
 ## Deal-Breaker Gate — run before scoring
 
-Check the posting against every item in CLAUDE.md's **Deal-breakers** list under Candidate Profile. A match on any one is **FAIL — hard stop.** Do not score, do not draft. Report which deal-breaker triggered, quoting the relevant posting text — same reporting standard as the eligibility gate above.
+Check the posting against every item in CLAUDE.md's **Deal-breakers** list under Candidate Profile. A match on any one is **FAIL — hard stop.** Do not score, do not draft. Report which deal-breaker triggered, quoting the relevant posting text — same reporting standard as the eligibility gate above. Language requirements are handled separately by the sub-check below, not via the Deal-breakers list.
 
-**Language requirement (worked example):** if your Deal-breakers list names a language requirement, the trigger is the posting **requiring proficiency in a language outside the ones you work in** as a condition of the role — e.g. for a candidate who works in English and Spanish: "fluent Polish required," "must communicate with the Warsaw team in Russian," "German B2+ mandatory." It is **not** triggered by the posting simply being *written* in another language — a posting in a language you don't speak, for a role that only needs the languages you do speak on the job, passes fine. Read the requirement itself, not the language the ad happens to be written in, and quote the exact requirement line when it fails.
+### Language sub-check
+
+Read the posting's language requirements as stated for **the role itself** — not the language the ad happens to be written in. A posting written in a language you don't work in, for a role that only needs languages you do work in on the job, passes fine; only an explicit job-condition requirement ("fluent X required," "must communicate with the Y team in Z") triggers this check. For each language the posting requires as a job condition, compare it against your Languages table in CLAUDE.md / `01-candidate-profile.md`:
+
+| Posting requirement vs. your Languages table | Verdict |
+|---|---|
+| Requires a language **not on your table at all** (e.g. "fluent Polish required," "must communicate with the Warsaw team in Russian," and you list no Polish/Russian row) | **FAIL — hard stop.** Do not score, do not draft. Quote the exact requirement line. |
+| Requires a language you **do** list, but the posting's stated bar (as written — "fluent," "native," "C1+," "business-level") reads as plausibly **higher** than your declared level | **FLAG, then proceed.** Not a fail. Score and draft normally, but surface the gap explicitly in your report to the user (quote both the posting's requirement and your declared level) so they can judge it themselves — bars like "fluent" vary a lot by company and geography, and a recruiter may be flexible. Never silently drop the posting and never silently treat it as a clean pass. |
+| Requires a language you list, at or below your declared level (or the posting doesn't specify a level at all — just names the language) | **PASS.** No note needed. |
+
+Judge the level comparison the same way you judge everything else in this framework: read both sides as written and reason about it, don't force either into a rigid scale — CEFR letters, LinkedIn-style buckets ("professional working proficiency"), and plain-English words ("conversational," "fluent," "native") all appear in the wild and don't map onto each other precisely. When genuinely unsure whether a stated bar exceeds the candidate's level, prefer FLAG over a silent PASS — the human is meant to be the tiebreaker, not the gate.
+
+**Worked example:** a candidate whose Languages table lists Spanish (Native) and English (B1/B2). A posting requiring "fluent Russian" → **FAIL**, Russian isn't declared at all. A posting requiring "fluent English" → **FLAG**, English is declared but "fluent" plausibly exceeds B1/B2 — score and draft the application, but tell the candidate this posting's bar may be a stretch and let them decide. A posting requiring "conversational English" or unspecified English → **PASS**, B1/B2 clears a "conversational" bar cleanly.
 
 ## Scoring Dimensions
 

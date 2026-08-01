@@ -8,7 +8,7 @@
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
-**Language scope:** default to writing every query category in **English and Spanish**, the two languages most LatAm/international tech postings use — adjust this (e.g. add Portuguese if you're in Brazil) to match the languages in your own CLAUDE.md profile. A posting requiring a third language as a job condition (not just written in one) is a deal-breaker — see CLAUDE.md's Deal-breakers list and `04-job-evaluation.md`'s Deal-Breaker Gate. Translate each category's keywords rather than machine-translating word-for-word (e.g. "Frontend Developer" -> "Desarrollador Frontend", not a literal word-for-word translation).
+**Language scope:** write every query category in every language listed in your CLAUDE.md Languages table (typically 2, sometimes more - e.g. add Portuguese if you're in Brazil and list it there). A posting requiring a language you have *not* declared, as a job condition, is excluded before scoring; a posting requiring a *higher level* than you declared in a language you *do* work in is flagged for your own judgment, not excluded — see `04-job-evaluation.md`'s Deal-Breaker Gate, the single source of truth for this rule. Translate each category's keywords rather than machine-translating word-for-word (e.g. "Frontend Developer" -> "Desarrollador Frontend", not a literal word-for-word translation).
 
 ## Search Sites
 
@@ -30,7 +30,7 @@ Secondary (company career pages via Google):
 
 ## Query Categories
 
-Queries are grouped by priority. Write **each category in both English and Spanish** (see Language scope above). Combine each query with your location terms where the site supports it.
+Queries are grouped by priority. Write **each category in every language from your Languages table** (see Language scope above). Combine each query with your location terms where the site supports it.
 
 ### Priority 1: [YOUR_PRIMARY_ROLE_TYPE]
 
@@ -111,9 +111,9 @@ When evaluating results, verify the job location is within reasonable commute di
 - [BORDERLINE_AREA] (borderline - ~X min by transit)
 - [TOO_FAR_AREA] (too far)
 
-## Language Filter (Deal-Breaker)
+## Language Filter
 
-State your own working languages here (default assumption for this fork: **English and Spanish**). A posting that **requires** proficiency in a third language as a condition of the role (not just written in one - e.g. "fluent Polish required," "must communicate with the Warsaw team in Russian") is a deal-breaker per CLAUDE.md and `04-job-evaluation.md`'s Deal-Breaker Gate - exclude it, or if already surfaced, mark it clearly as a deal-breaker rather than scoring it on skills alone. Postings simply *written* in a language you don't work in, that don't require it on the job, are fine.
+Your working languages and levels are in CLAUDE.md's Languages table. When filtering scraped results, apply `04-job-evaluation.md`'s Deal-Breaker Gate language sub-check: a posting requiring a language you haven't declared at all is excluded; a posting requiring a higher level than you declared in a language you do work in is not excluded, flag it clearly instead (see `job-scraper/SKILL.md`'s Step 3 "Quick Fit Assessment" for how the flag surfaces in `/scrape` output). Postings simply *written* in a language you don't work in, that don't require it on the job, are fine.
 
 ## Date Filter
 
