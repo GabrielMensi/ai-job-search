@@ -11,6 +11,19 @@ prefer updating to a tagged release over pulling raw `master` (see
 files a release touched; `python3 tools/check_upstream_updates.py` lists them with
 per-file diff commands.
 
+## [Unreleased]
+
+### Security & privacy
+
+- **The gitignore guard now covers every personal-output rule** - `security_guards.py`
+  additionally requires the ignore rules for Gmail sync state (`gmail_sync/`), generated
+  dashboards (`reports/`), upskill reports (`upskill/*.md`), Notion sync state
+  (`**/job_scraper/notion_sync.json`), pasted postings (`documents/postings/**`), scraper
+  markdown output (`**/job_scraper/*.md`), and behavioral-report / LinkedIn-profile PDFs.
+  With these, every `.gitignore` rule outside the guard's required list is build tooling
+  noise, so any future weakening of the personal-data boundary fails CI. All rules were
+  already present in `.gitignore`; the guard now enforces the full set. (#271)
+
 ## [1.2.0] - 2026-08-01
 
 ### Added
