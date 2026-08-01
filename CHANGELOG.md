@@ -25,6 +25,13 @@ per-file diff commands.
 
 ### Security & privacy
 
+- **SETUP.md no longer calls a fork "private working space"** - forks of public GitHub
+  repositories are always public, so that wording invited exactly the personal-data
+  exposure it seemed to rule out. Section 8 now states the fork-is-public fact plainly and
+  documents the safe alternative (a private repository with this repo as `upstream`), and
+  `/setup` ends with a matching privacy note the moment profile data first lands in
+  tracked files. Prompted by
+  [discussion #266](https://github.com/MadsLorentzen/ai-job-search/discussions/266).
 - **The gitignore guard now covers two more personal-data rules** - `security_guards.py`
   requires `cover_letters/Cover_*.*` (the uppercase cover-letter naming variant `/apply`
   recognizes) and `cv/*.txt` (ATS text extractions of tailored CVs) in `.gitignore`, so a
@@ -33,6 +40,12 @@ per-file diff commands.
 
 ### Fixed
 
+- `tools/check_upstream_updates.py` no longer reports a false "up to date with upstream"
+  when it silently falls back to a fork's own `origin` remote - the default state of a
+  plain fork clone, where the script compared the fork against itself and could never
+  detect upstream updates. It now warns that the fallback remote is not the template repo,
+  shows the `git remote add upstream` command to fix it, and names the ref it actually
+  compared against. (#265)
 - Removed the vestigial `cover_letters/OpenFonts/cover.cls` - an unreferenced remnant of
   the original font bundle that, since #252's class rename, ambiguously declared the same
   `cover` class as the real `cover_letters/cover.cls`.
