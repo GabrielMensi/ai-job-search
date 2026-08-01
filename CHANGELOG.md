@@ -11,7 +11,7 @@ prefer updating to a tagged release over pulling raw `master` (see
 files a release touched; `python3 tools/check_upstream_updates.py` lists them with
 per-file diff commands.
 
-## [Unreleased]
+## [1.2.0] - 2026-08-01
 
 ### Added
 
@@ -52,6 +52,13 @@ per-file diff commands.
 - Added regression tests pinning #252's ragged-row bounds fix in
   `tools/convert_salary_excel.py` (dimension-less workbooks read in `read_only` mode
   yield rows shorter than the header).
+
+### Changed
+
+- CONTRIBUTING's "run what CI runs" list is now complete - it previously omitted
+  `tools/security_guards.py` and the exact `unittest` invocation, the precise checks a
+  contributor PR had already failed on. Prompted by
+  [issue #262](https://github.com/MadsLorentzen/ai-job-search/issues/262).
 
 ## [1.1.0] - 2026-07-30
 
