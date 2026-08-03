@@ -46,6 +46,27 @@ server-side (Next.js) — this skill parses that directly (`JSON.parse`), no HTM
 scraping or chunked regex needed, the simplest of the LatAm-focused portals in this
 fork.
 
+## This is the practical substitute for Indeed Argentina
+
+`ar.indeed.com` itself was investigated and declined - it's behind a real
+Cloudflare interactive JS challenge on every path, including the homepage, that
+blocks even a plain fetch with a valid session cookie replayed from the same
+machine/IP (confirmed live: matching cookie + User-Agent still got `403`, because
+Cloudflare here also fingerprints the TLS handshake itself, which a non-browser
+HTTP client can't replicate). Indeed's own Partner API is one-directional the
+wrong way (for employers to *post* jobs, requires partner approval) - no public
+read/search API exists.
+
+SimplyHired is part of the same corporate group as Indeed (Recruit Holdings), and
+its listings carry Indeed-network fields (`indeedApply`, `dateOnIndeed`,
+`isIndeedApply`) - confirmed live it's genuinely the same underlying job
+inventory, not just a thin slice: a single `q=developer` search returned 625 total
+results, and of a 20-job sample, only 8 were sponsored/promoted - the other 12
+(60%) were organic listings from 16 distinct real companies (including recognizable
+names like Cognizant, EY, BPM LLP). None of Indeed's anti-bot protection applies
+here. **If you were looking for Indeed Argentina specifically, this skill is the
+way to reach that inventory.**
+
 ## Important limitations
 
 - **A bare search is not supported.** `/search` with neither a keyword nor a
