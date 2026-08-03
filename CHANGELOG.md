@@ -13,6 +13,22 @@ per-file diff commands.
 
 ## [Unreleased]
 
+### Added
+
+- **Language Gate** - no dimension or gate anywhere in the framework checked a posting's
+  language requirements against what the candidate actually speaks (not a Scoring Dimension,
+  not a `/scrape`/`/rank` field, nothing for `/apply`'s existing generic language detection
+  to report to). Adds that check, structured like the existing Eligibility Gate, on a new
+  structured `Languages` table in CLAUDE.md / `01-candidate-profile.md` (`/setup` asks, or
+  infers it from a CV/LinkedIn export): a posting requiring a language you haven't declared
+  at all is a hard **FAIL**; one requiring a higher level than you declared in a language you
+  *do* work in is **FLAG**, not an auto-reject, so borderline cases (a strict "fluent" bar vs.
+  your own B1/B2) get your judgment instead of a silent drop; a requirement at or below your
+  declared level is a clean **PASS**. Wired through `/scrape`, `/rank`, and `/apply`, with
+  `language_gate`/`language_note` persisted into `seen_jobs.json` alongside the existing
+  `location` veto so a re-read of the file (or a future debugging session) can recover why a
+  job did or didn't make the shortlist.
+
 ### Security & privacy
 
 - **The gitignore guard now covers every personal-output rule** - `security_guards.py`
