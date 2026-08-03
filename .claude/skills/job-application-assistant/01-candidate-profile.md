@@ -1,5 +1,5 @@
 ---
-framework_version: 1.1.0
+framework_version: 1.1.1
 ---
 
 # Candidate Profile
@@ -19,7 +19,7 @@ framework_version: 1.1.0
 
 ### Languages
 <!-- Every language you can work in professionally, with your honest level. Used by the
-Deal-Breaker Gate in 04-job-evaluation.md and by job-scraper/search-queries.md's query-language
+Language Gate in 04-job-evaluation.md and by job-scraper/search-queries.md's query-language
 generation. Omit any language you don't actually work in - an undeclared language is treated as
 a hard no, not a gap to smooth over. -->
 

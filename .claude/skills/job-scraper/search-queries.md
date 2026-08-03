@@ -4,11 +4,11 @@
 
 ## Installed portal CLIs (primary for `/scrape`)
 
-`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search`, `freehire-search`, and `himalayas-search`. This fork additionally ships five Argentina/LatAm portal CLIs — `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search`, `empleosit-search` — scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
+`/scrape` discovers every portal skill under `.agents/skills/*/SKILL.md` and runs its CLI first. Shipped country-agnostic CLIs include `linkedin-search`, `freehire-search`, and `himalayas-search`. This fork additionally ships ten Argentina/LatAm portal CLIs: `getonboard-search`, `computrabajo-search`, `bumeran-search`, `zonajobs-search`, `empleosit-search`, and `simplyhired-ar-search` (enabled by default — Argentina/LatAm market boards), plus `latojobs-search`, `wearedistributed-search`, and `remoteok-search` (disabled by default — US/global companies hiring in LatAm, most postings expect strong English; enable via `/setup` or by hand, see each skill's `SKILL.md`) — all scaffolded the same way as the Danish demos via `/add-portal`. Danish demos and any further skill you add with `/add-portal` are included the same way. You do **not** need a matching `site:` line below for those CLIs to run.
 
 The `site:` query templates in this file are the **WebSearch fallback** — for portals without a CLI, company career pages, or when a CLI fails.
 
-**Language scope:** write every query category in every language listed in your CLAUDE.md Languages table (typically 2, sometimes more - e.g. add Portuguese if you're in Brazil and list it there). A posting requiring a language you have *not* declared, as a job condition, is excluded before scoring; a posting requiring a *higher level* than you declared in a language you *do* work in is flagged for your own judgment, not excluded — see `04-job-evaluation.md`'s Deal-Breaker Gate, the single source of truth for this rule. Translate each category's keywords rather than machine-translating word-for-word (e.g. "Frontend Developer" -> "Desarrollador Frontend", not a literal word-for-word translation).
+**Language scope:** write every query category in every language listed in your CLAUDE.md Languages table (typically 2, sometimes more - e.g. add Portuguese if you're in Brazil and list it there). A posting requiring a language you have *not* declared, as a job condition, is excluded before scoring; a posting requiring a *higher level* than you declared in a language you *do* work in is flagged for your own judgment, not excluded — see `04-job-evaluation.md`'s Language Gate, the single source of truth for this rule. Translate each category's keywords rather than machine-translating word-for-word (e.g. "Frontend Developer" -> "Desarrollador Frontend", not a literal word-for-word translation).
 
 ## Search Sites
 
@@ -18,19 +18,25 @@ Primary (your market's job boards):
 - **himalayas.app** - global remote-jobs board with a public, documented JSON API (no auth); country-filterable (e.g. `country=AR`); covered by the `himalayas-search` CLI
 - **[YOUR_INDUSTRY_JOB_BOARD]** - a niche/industry board for your field (optional)
 
-Argentina/LatAm portals shipped with this fork:
-- **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain); covered by the `getonboard-search` CLI. Bilingual EN/ES postings.
+Argentina/LatAm market portals shipped with this fork (enabled by default):
+- **getonbrd.com (GetOnBoard)** - Latin America tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain), via GetOnBoard's public REST API; covered by the `getonboard-search` CLI. Bilingual EN/ES postings.
 - **ar.computrabajo.com (Computrabajo)** - Argentina (also spans ~20 other countries - swap the CLI's base URL if yours differs); covered by the `computrabajo-search` CLI. Server-rendered, good multi-word query support.
 - **bumeran.com.ar (Bumeran)** - Argentina (also spans Mexico/Peru/Ecuador/Panama/Venezuela); covered by the `bumeran-search` CLI. `--query` is an AND-of-terms match against posting titles - use a technology name (`"react"`, `"desarrollador"`), not a role-category English word like `"frontend"`, which reliably returns 0 - see the CLI's `SKILL.md` for why.
 - **zonajobs.com.ar (Zonajobs)** - Argentina only; covered by the `zonajobs-search` CLI. Shares a search index with Bumeran (Navent group) - the CLI filters out cross-posted duplicates automatically. Same query quirk as Bumeran.
 - **empleosit.com.ar (Empleos IT)** - Argentina only, IT/tech-focused board (every listing is a tech role, unlike the general-purpose boards above); covered by the `empleosit-search` CLI. Server-rendered, no API. Posting dates are absolute (`DD/MM/YYYY`), so `--jobage` filtering is exact rather than best-effort.
+- **simplyhired.com.ar (SimplyHired Argentina)** - Argentina, Indeed/Recruit Holdings network (includes Indeed's own AR results); covered by the `simplyhired-ar-search` CLI.
+
+"US companies hiring in LatAm" portals shipped with this fork (disabled by default - most postings expect strong English; enable via `/setup` or by hand):
+- **latojobs.com (LatoJobs)** - curated LatAm tech board aimed at US companies hiring in LatAm; covered by the `latojobs-search` CLI.
+- **wearedistributed.org (We Are Distributed)** - LatAm remote jobs, discloses real hiring company names; covered by the `wearedistributed-search` CLI.
+- **remoteok.com (RemoteOK)** - large global remote board via its public JSON API, supplementary (not LatAm-targeted); covered by the `remoteok-search` CLI.
 
 Secondary (company career pages via Google):
 - Direct Google searches with `site:` filters for known target companies
 
 ## Query Categories
 
-Queries are grouped by priority. Write **each category in every language from your Languages table** (see Language scope above). Combine each query with your location terms where the site supports it.
+Queries are grouped by priority. Write **each category in every language from your Languages table** (see Language scope above). Combine each query with your location terms (e.g. your city, region, or metro area) where the site supports it.
 
 ### Priority 1: [YOUR_PRIMARY_ROLE_TYPE]
 
@@ -39,6 +45,8 @@ These match your strongest and most desired career direction.
 **English:**
 ```
 "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_KEY_SKILL] remote
+site:[YOUR_JOB_BOARD] "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_CITY]
+site:[YOUR_JOB_BOARD] "[YOUR_KEY_SKILL]" [YOUR_CITY]
 site:linkedin.com/jobs "[YOUR_PRIMARY_JOB_TITLE]" [YOUR_COUNTRY]
 site:getonbrd.com "[YOUR_KEY_SKILL]" [YOUR_PRIMARY_ROLE_TYPE]
 ```
@@ -113,7 +121,7 @@ When evaluating results, verify the job location is within reasonable commute di
 
 ## Language Filter
 
-Your working languages and levels are in CLAUDE.md's Languages table. When filtering scraped results, apply `04-job-evaluation.md`'s Deal-Breaker Gate language sub-check: a posting requiring a language you haven't declared at all is excluded; a posting requiring a higher level than you declared in a language you do work in is not excluded, flag it clearly instead (see `job-scraper/SKILL.md`'s Step 3 "Quick Fit Assessment" for how the flag surfaces in `/scrape` output). Postings simply *written* in a language you don't work in, that don't require it on the job, are fine.
+Your working languages and levels are in CLAUDE.md's Languages table. When filtering scraped results, apply `04-job-evaluation.md`'s Language Gate: a posting requiring a language you haven't declared at all is excluded; a posting requiring a higher level than you declared in a language you do work in is not excluded, flag it clearly instead (see `job-scraper/SKILL.md`'s Step 3 "Quick Fit Assessment" for how the flag surfaces in `/scrape` output). Postings simply *written* in a language you don't work in, that don't require it on the job, are fine.
 
 ## Date Filter
 

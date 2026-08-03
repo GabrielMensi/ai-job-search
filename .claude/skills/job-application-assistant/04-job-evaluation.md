@@ -1,5 +1,5 @@
 ---
-framework_version: 1.2.0
+framework_version: 1.2.2
 ---
 
 # Job Evaluation Framework
@@ -30,11 +30,9 @@ If the candidate's permit also constrains *hours* or *start date* (a student vis
 
 A role that fails this gate is not scored and not drafted. Everything below applies only to roles that pass it.
 
-## Deal-Breaker Gate — run before scoring
+## Language Gate — run before scoring
 
-Check the posting against every item in CLAUDE.md's **Deal-breakers** list under Candidate Profile. A match on any one is **FAIL — hard stop.** Do not score, do not draft. Report which deal-breaker triggered, quoting the relevant posting text — same reporting standard as the eligibility gate above. Language requirements are handled separately by the sub-check below, not via the Deal-breakers list.
-
-### Language sub-check
+No dimension or gate anywhere in this framework currently checks a posting's language requirements against what the candidate actually speaks - it is not one of the five Scoring Dimensions below, not a field `/scrape` or `/rank` track, and not something `/apply`'s language detection (Step 1, which already extracts a posting's required language generically) has anywhere to report to. This gate adds that check, structured the same way as the Eligibility Gate above: read the posting, classify against profile data, and treat a hard mismatch as FAIL before scoring.
 
 Read the posting's language requirements as stated for **the role itself** — not the language the ad happens to be written in. A posting written in a language you don't work in, for a role that only needs languages you do work in on the job, passes fine; only an explicit job-condition requirement ("fluent X required," "must communicate with the Y team in Z") triggers this check. For each language the posting requires as a job condition, compare it against your Languages table in CLAUDE.md / `01-candidate-profile.md`:
 
