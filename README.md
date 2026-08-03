@@ -193,6 +193,10 @@ ai-job-search/
 │   ├── zonajobs-search/               # Zonajobs (Argentina, Navent group)
 │   ├── empleosit-search/              # Empleos IT / empleosit.com.ar (Argentina, IT/tech only)
 │   ├── himalayas-search/              # Himalayas.app remote jobs (country-agnostic, LatAm-friendly)
+│   ├── simplyhired-ar-search/         # SimplyHired Argentina (Indeed network)
+│   ├── latojobs-search/               # LatoJobs (LatAm tech, US companies hiring)
+│   ├── wearedistributed-search/       # We Are Distributed (LatAm remote, real company names)
+│   ├── remoteok-search/               # RemoteOK.com (global remote, supplementary)
 │   ├── linkedin-search/               # LinkedIn public job listings (country-agnostic)
 │   └── freehire-search/               # freehire.me tech job aggregator (multi-market, REST API)
 ├── cv/
@@ -301,13 +305,17 @@ The four Danish CLI tools in `.agents/skills/` (Jobbank, Jobdanmark, Jobindex, J
 
 Give it your local job board's URL. The command investigates the portal (search-URL pattern, result-page structure, robots.txt/access rules), scaffolds a CLI skill with the same structure, commands, and output contract as the shipped ones, and test-runs a live query before registering anything. Auth-walled portals are declined, and portals with restrictive terms get a prominent personal-use-only warning in the generated skill. The generated skill is market-specific and lives in your fork; the generator itself is the universal part.
 
-This fork additionally ships six Argentina/LatAm portal CLIs, scaffolded the same way via `/add-portal`:
+This fork additionally ships ten Argentina/LatAm portal CLIs, scaffolded the same way via `/add-portal`:
 
 - **`getonboard-search`** — [getonbrd.com](https://www.getonbrd.com), LatAm tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain). See `.agents/skills/getonboard-search/SKILL.md` and `url-reference.md` for access notes (its `robots.txt` names specific AI crawlers as disallowed — read the personal-use warning before relying on it).
 - **`computrabajo-search`** — [ar.computrabajo.com](https://ar.computrabajo.com), Argentina. Server-rendered, path-segment search, good multi-word query support.
 - **`bumeran-search`** / **`zonajobs-search`** — [bumeran.com.ar](https://www.bumeran.com.ar) / [zonajobs.com.ar](https://www.zonajobs.com.ar), Argentina (Navent group, shared backend behind Cloudflare — `zonajobs-search` filters out cross-posted Bumeran duplicates automatically).
 - **`empleosit-search`** — [empleosit.com.ar](https://www.empleosit.com.ar), Argentina-only, IT/tech roles exclusively across all seniority levels. Server-rendered HTML, no auth.
 - **`himalayas-search`** — [himalayas.app](https://himalayas.app)'s public JSON API for remote jobs worldwide. Country-agnostic by design (works for any market via `--location`), shipped here for its first-class Argentina/LatAm remote-jobs filtering.
+- **`simplyhired-ar-search`** — [simplyhired.com.ar](https://www.simplyhired.com.ar), Argentina (Indeed/Recruit Holdings network). `__NEXT_DATA__` JSON, no HTML scraping. See `url-reference.md` for its `robots.txt` note (names `anthropic-ai` specifically in a block separate from the generic rules this CLI's requests fall under — a deliberate, documented judgment call, not an oversight) and why a bare search isn't supported (redirects to a Cloudflare-challenged homepage).
+- **`latojobs-search`** — [latojobs.com](https://www.latojobs.com), curated LatAm tech board, directly aimed at "US companies hiring in LatAm" (real results included EBANX, Cloudbeds, Crunchyroll, Elastic postings scoped to LATAM). Ships with a personal-use-only warning — its Terms of Service explicitly prohibit automated scraping for registered users, even though `robots.txt` itself is permissive.
+- **`wearedistributed-search`** — [wearedistributed.org](https://wearedistributed.org)'s LatAm remote-jobs page, notable for disclosing **real hiring company names** on every posting (RevenueCat, Gradle, Alpaca, Sardine, Customer.io confirmed live) — the property most other "hire in LatAm" boards lack. (A similar candidate, Near/hirewithnear.com, was investigated and deliberately not built: it never discloses the hiring company anywhere, on either the listing or detail pages.)
+- **`remoteok-search`** — [remoteok.com](https://remoteok.com)'s public JSON API, a large global remote-jobs board. Supplementary, not LatAm-targeted (no structural location/country filter exists on this board) — `--location` is a best-effort text match, documented as such.
 
 These join `linkedin-search`/`freehire-search` as country-agnostic-friendly starting points, and the search framework generates queries in every language listed in your CLAUDE.md Languages table (see `search-queries.md`), with a dynamic per-user language gate: `04-job-evaluation.md`'s Deal-Breaker Gate hard-rejects a posting that requires a language you haven't declared at all, and flags (without rejecting) a posting that asks for a higher level than you declared in a language you do work in — letting you judge borderline cases like a strict "fluent" bar against your own B1/B2 yourself. `/setup` captures your languages and levels directly, or infers them from your CV/LinkedIn export. This fork tracks upstream via `python3 tools/check_upstream_updates.py` (see `CONTRIBUTING.md` / `SETUP.md` §8).
 

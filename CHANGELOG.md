@@ -23,6 +23,21 @@ per-file diff commands.
   level than you declared in a language you do work in, so borderline cases get your judgment
   instead of a silent drop. Proposed upstream as
   [PR #275](https://github.com/MadsLorentzen/ai-job-search/pull/275).
+- **Four new portal skills targeting "US companies hiring in LatAm"** -
+  `latojobs-search` (latojobs.com, curated LatAm tech board with real postings
+  from EBANX/Cloudbeds/Crunchyroll/Elastic scoped to LATAM; ships with a
+  personal-use warning since its Terms explicitly prohibit automated scraping
+  for registered users), `wearedistributed-search` (wearedistributed.org,
+  notable for disclosing real hiring company names on every posting - the
+  property most similar boards lack), `remoteok-search` (remoteok.com's public
+  JSON API, a large supplementary global board, not LatAm-targeted), and
+  `simplyhired-ar-search` (simplyhired.com.ar, Indeed-network, Argentina). A
+  fifth candidate (Near/hirewithnear.com) was investigated and deliberately not
+  built - it never discloses the hiring company anywhere. See each skill's
+  `url-reference.md` for the live investigation behind these calls, including
+  two access-restriction findings (latojobs.com's Terms, and
+  simplyhired.com.ar's `robots.txt` naming `anthropic-ai` specifically)
+  documented and reasoned through rather than silently bypassed.
 
 ### Security & privacy
 
