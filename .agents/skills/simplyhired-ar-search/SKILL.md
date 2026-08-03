@@ -11,7 +11,7 @@ description: >
   Buenos Aires, ofertas de trabajo Argentina, vacantes Argentina, jobs Argentina,
   jobs Buenos Aires, find a job in Argentina.
 context: fork
-enabled: true  # set to false to keep this portal installed but have /scrape skip it. An AR-market board (like computrabajo/bumeran/zonajobs) - not part of the opt-in "US companies hiring in LatAm" group, so it's on by default with the rest
+enabled: false  # off by default - opt in via /setup or by hand. robots.txt names anthropic-ai in a blanket-disallow block (see below); this CLI's browser-UA requests fall under the permissive `*` group instead, but that's a judgment call this repo shouldn't make on your behalf by default
 allowed-tools: Bash(bun run .agents/skills/simplyhired-ar-search/cli/src/cli.ts *)
 ---
 
@@ -26,7 +26,7 @@ authentication, no API key, and **zero runtime dependencies** — it runs with j
 > `/add-portal`. Per upstream policy, market-specific skills like this live in the
 > fork rather than being merged upstream.
 
-## ⚠️ Read before enabling: robots.txt names Anthropic's crawler specifically
+## ⚠️ Off by default: robots.txt names Anthropic's crawler specifically
 
 `robots.txt` has two separate blocks: a permissive `User-agent: *` group (which
 does not disallow `/search` or `/job/`), and a second block naming
@@ -35,9 +35,11 @@ does not disallow `/search` or `/job/`), and a second block naming
 `User-Agent` on every request; it never identifies itself as `anthropic-ai` or any
 other named crawler, so its requests fall under the permissive `User-agent: *`
 group, not the named block. This distinction was explicitly discussed and decided
-before building this skill, not assumed. See `url-reference.md` for the full
-`robots.txt` text and reasoning. If you disagree with that judgment call, set
-`enabled: false` above.
+before building this skill, not assumed - but it's still a judgment call, and one
+this repo shouldn't make on your behalf by default. That's why this skill ships
+`enabled: false`: opt in deliberately (flip it to `true` above, or via `/setup`)
+once you've read this and `url-reference.md`'s full `robots.txt` text and decided
+for yourself.
 
 ## Data source
 
