@@ -15,7 +15,7 @@ description: >
   remoto, find a remote job, remote developer jobs, remote React jobs, jobs open
   worldwide, hiring remote.
 context: fork
-enabled: true  # set to false to keep this portal installed but have /scrape skip it
+enabled: false  # off by default - opt in via /setup or by hand. Global remote board, expects English; not LatAm-targeted (see "Important limitations" below) so it's a supplementary source, not a default
 allowed-tools: Bash(bun run .agents/skills/remoteok-search/cli/src/cli.ts *)
 ---
 

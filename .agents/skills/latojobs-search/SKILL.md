@@ -13,7 +13,7 @@ description: >
   estadounidenses que contratan en LatAm, remote jobs Argentina Brazil Mexico,
   búsqueda de trabajo remoto LatAm.
 context: fork
-enabled: true  # set to false to keep this portal installed but have /scrape skip it
+enabled: false  # off by default - opt in via /setup or by hand. Most postings here expect strong/fluent English (US-hiring-in-LatAm board); see README.md's "US companies hiring in LatAm" section before enabling
 allowed-tools: Bash(bun run .agents/skills/latojobs-search/cli/src/cli.ts *)
 ---
 

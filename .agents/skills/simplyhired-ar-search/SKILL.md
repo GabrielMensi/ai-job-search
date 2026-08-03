@@ -11,7 +11,7 @@ description: >
   Buenos Aires, ofertas de trabajo Argentina, vacantes Argentina, jobs Argentina,
   jobs Buenos Aires, find a job in Argentina.
 context: fork
-enabled: true  # set to false to keep this portal installed but have /scrape skip it
+enabled: true  # set to false to keep this portal installed but have /scrape skip it. An AR-market board (like computrabajo/bumeran/zonajobs) - not part of the opt-in "US companies hiring in LatAm" group, so it's on by default with the rest
 allowed-tools: Bash(bun run .agents/skills/simplyhired-ar-search/cli/src/cli.ts *)
 ---
 
