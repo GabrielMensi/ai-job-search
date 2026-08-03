@@ -13,6 +13,17 @@ per-file diff commands.
 
 ## [Unreleased]
 
+### Added
+
+- **Dynamic per-user language deal-breaker gate** - `/setup` now captures every language you
+  work in with your proficiency level as a structured table in CLAUDE.md / `01-candidate-profile.md`,
+  replacing the old hardcoded English/Spanish default. `04-job-evaluation.md`'s Deal-Breaker Gate
+  (used by `/apply`, `/rank`, and `/scrape`) now hard-rejects postings requiring a language you
+  haven't declared at all, and flags - rather than auto-rejects - postings asking for a higher
+  level than you declared in a language you do work in, so borderline cases get your judgment
+  instead of a silent drop. Proposed upstream as
+  [PR #275](https://github.com/MadsLorentzen/ai-job-search/pull/275).
+
 ### Security & privacy
 
 - **The gitignore guard now covers every personal-output rule** - `security_guards.py`
@@ -28,13 +39,6 @@ per-file diff commands.
 
 ### Added
 
-- **Dynamic per-user language deal-breaker gate** - `/setup` now captures every language you
-  work in with your proficiency level as a structured table in CLAUDE.md / `01-candidate-profile.md`,
-  replacing the old hardcoded English/Spanish default. `04-job-evaluation.md`'s Deal-Breaker Gate
-  (used by `/apply`, `/rank`, and `/scrape`) now hard-rejects postings requiring a language you
-  haven't declared at all, and flags - rather than auto-rejects - postings asking for a higher
-  level than you declared in a language you do work in, so borderline cases get your judgment
-  instead of a silent drop.
 - **`/rank` now persists `strengths` and `gaps` into `seen_jobs.json`** - Step 2's scoring
   agents already produced both arrays per job; Step 4 previously kept only `rank_score`,
   `rank_verdict`, and `rank_date`, so the honest per-posting findings were printed once in
