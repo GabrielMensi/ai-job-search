@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 // Self-contained CLI for searching jobs on GetOnBoard (getonbrd.com), Latin
-// America's tech/startup job board. No external CLI framework, so it runs
-// anywhere `bun` is available with zero install beyond the repo clone.
+// America's tech/startup job board, via its official public REST API. No
+// external CLI framework, so it runs anywhere `bun` is available with zero
+// install beyond the repo clone.
 //
-// Personal use only — see ../SKILL.md for why (robots.txt names several AI
-// crawlers, including ClaudeBot, as disallowed even though generic automated
-// access is explicitly allowed). Keep volume low and do not use this
-// commercially or for bulk data collection. Run it on your own responsibility.
+// Data source: https://www.getonbrd.com/api/v0/search/jobs - a documented,
+// unauthenticated public endpoint (see ../url-reference.md). Replaces an
+// earlier HTML-scraping implementation of this skill.
 
 import { runSearch, type SearchOpts } from "./commands/search.js"
 import { runDetail, type DetailOpts } from "./commands/detail.js"
@@ -37,34 +37,36 @@ function parseFlags(argv: string[]): Flags {
   return flags
 }
 
-const HELP = `getonboard-cli — search jobs on GetOnBoard (getonbrd.com, Latin America tech jobs)
+const HELP = `getonboard-cli — search jobs on GetOnBoard (getonbrd.com, Latin America tech jobs) via its public API
 
 USAGE
   bun run src/cli.ts search [flags]
   bun run src/cli.ts detail <id|url> [--format json|plain]
 
 SEARCH FLAGS
-  --query, -q <text>      Keywords — matched against GetOnBoard's tag/category
-                          taxonomy first (e.g. "react", "python", "programming"),
-                          falling back to a keyword filter over the Programming
-                          category if nothing matches. See SKILL.md.
-  --location, -l <text>   City name (e.g. "Buenos Aires", "Santiago"). Used alone
-                          for a direct city listing; combined with --query it is
-                          applied as a client-side filter (see notes in SKILL.md).
-  --jobage <days>         Keep postings normalized to N days old or newer.
-                          Best-effort — see SKILL.md. Default: no filter.
-  --page <n>              Accepted for interface consistency; GetOnBoard's public
-                          listings do not support page-based navigation (no-op).
-  --limit, -n <n>         Cap results emitted (client-side).
-  --format <fmt>          json (default) | table | plain.
+  --query, -q <text>      Free-text keyword search (real full-text search via the
+                          API - not a tag/category guess like the old scraping
+                          version).
+  --location, -l <text>   A market GetOnBoard covers: Argentina, Chile, Colombia,
+                          Mexico, Peru, Ecuador, Costa Rica, Spain (or their
+                          2-letter code, e.g. "AR"). Country-level, not city-level
+                          - the API has no city filter (see SKILL.md).
+  --jobage <days>         Keep postings within N days. Exact - every job carries a
+                          real publish timestamp, unlike the old year-inferred
+                          "Mon D" badge.
+  --page <n>              Real server-side pagination (50/page) - unlike the old
+                          scraping version, this is NOT a no-op.
+  --limit, -n <n>          Cap results emitted (client-side).
+  --format <fmt>           json (default) | table | plain.
 
 EXAMPLES
   bun run src/cli.ts search -q "react" --format table
-  bun run src/cli.ts search -q "react" -l "Buenos Aires" --format table
-  bun run src/cli.ts search -l "Buenos Aires" --format table
-  bun run src/cli.ts detail desarrollador-senior-full-stack-tcit-santiago --format plain
+  bun run src/cli.ts search -q "react" -l "Argentina" --format table
+  bun run src/cli.ts search -l "Chile" --format table
+  bun run src/cli.ts search -q "react" --jobage 14 --format table
+  bun run src/cli.ts detail grupo-mariposa/ai-engineer-senior-grupo-mariposa-remote --format plain
 
-Personal use only — keep volume low (see SKILL.md for why).
+See ../SKILL.md and ../url-reference.md for the full investigation and API notes.
 `
 
 async function main(): Promise<number> {

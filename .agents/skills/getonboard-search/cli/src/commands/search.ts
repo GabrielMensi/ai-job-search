@@ -1,117 +1,69 @@
 import {
-  BASE_URL,
-  htmlFetch,
-  parseJobCards,
-  slugifyQuery,
-  daysSince,
+  API_BASE,
+  apiFetch,
+  buildExpandParam,
+  toJobCard,
+  daysSinceEpochSeconds,
+  resolveCountryCode,
   writeError,
+  type SearchResponse,
   type JobCard,
+  type RawJob,
 } from "../helpers.js"
 
 export interface SearchOpts {
   query?: string
-  location?: string
-  jobage: number // 9999 = no filter (matches the convention used by linkedin-search)
+  location?: string // resolved to an alpha-2 country_code; unresolved input is an error (see below)
+  jobage: number // 9999 = no filter; exact, unlike the old HTML implementation's year-inferred badge
   page: number
   limit?: number
   format: "json" | "table" | "plain"
 }
 
-/**
- * GetOnBoard has no free-text search endpoint (see helpers.ts). This resolves
- * a query in three tiers, each hitting a confirmed-real endpoint:
- *   1. Tag page       /jobs/tag/<slug>        e.g. "react" -> /jobs/tag/react
- *   2. Category page  /jobs/<slug>            e.g. "programming" -> /jobs/programming
- *   3. Keyword filter over the default Programming-category listing, matching
- *      any significant word of the query against each card's title.
- * Tier 1 never 404s and is looser than an exact single-tag lookup — GetOnBoard
- * appears to resolve some made-up multi-word slugs against individually
- * recognized words (verified live). Because of that, tier advancement is
- * decided by counting parsed result cards, never by response status.
- * Returns the resolved cards plus a note on which tier was used (surfaced in
- * `meta.matchedVia` so callers can tell a real tag hit from a keyword-filtered
- * fallback).
- */
-async function resolveQuery(query: string): Promise<{ cards: JobCard[]; matchedVia: string }> {
-  const slug = slugifyQuery(query)
-
-  if (slug) {
-    const tagHtml = await htmlFetch(`${BASE_URL}/jobs/tag/${slug}`)
-    const tagCards = parseJobCards(tagHtml)
-    if (tagCards.length > 0) return { cards: tagCards, matchedVia: `tag:${slug}` }
-
-    const categoryHtml = await htmlFetch(`${BASE_URL}/jobs/${slug}`)
-    const categoryCards = parseJobCards(categoryHtml)
-    if (categoryCards.length > 0) return { cards: categoryCards, matchedVia: `category:${slug}` }
-  }
-
-  // Fallback: filter the default Programming category by keyword. This is a
-  // best-effort net for queries that don't match a known tag or category —
-  // GetOnBoard has no true full-text search to fall back on instead.
-  const fallbackHtml = await htmlFetch(`${BASE_URL}/jobs/programming`)
-  const words = slug.split("-").filter((w) => w.length >= 3)
-  const cards = parseJobCards(fallbackHtml).filter((c) => {
-    const t = c.title.toLowerCase()
-    return words.length === 0 || words.some((w) => t.includes(w))
-  })
-  return { cards, matchedVia: "keyword-filter:programming" }
+function buildUrl(opts: SearchOpts, countryCode: string | null): string {
+  const params = new URLSearchParams()
+  if (opts.query) params.set("query", opts.query)
+  if (countryCode) params.set("country_code", countryCode)
+  params.set("page", String(opts.page))
+  params.set("per_page", "50")
+  params.set("expand", buildExpandParam())
+  return `${API_BASE}/search/jobs?${params.toString()}`
 }
 
 function renderTable(cards: JobCard[]): string {
   if (cards.length === 0) return "No results."
   const rows = cards.map((c) => {
-    const title = (c.title || "").slice(0, 42).padEnd(42)
+    const title = (c.title || "").slice(0, 40).padEnd(40)
     const company = (c.company || "—").slice(0, 22).padEnd(22)
-    const loc = (c.location || "—").slice(0, 22).padEnd(22)
-    const date = c.date || "—"
-    return `${c.id.slice(0, 28).padEnd(28)} ${title} ${company} ${loc} ${date}`
+    const loc = (c.location || "—").slice(0, 18).padEnd(18)
+    const date = (c.date || "—").slice(0, 10)
+    return `${c.id.slice(0, 36).padEnd(36)} ${title} ${company} ${loc} ${date}`
   })
-  const header =
-    "ID".padEnd(28) + " " + "TITLE".padEnd(42) + " " + "COMPANY".padEnd(22) + " " + "LOCATION".padEnd(22) + " DATE"
+  const header = "ID".padEnd(36) + " " + "TITLE".padEnd(40) + " " + "COMPANY".padEnd(22) + " " + "LOCATION".padEnd(18) + " DATE"
   return [header, "-".repeat(header.length), ...rows].join("\n")
 }
 
 export async function runSearch(opts: SearchOpts): Promise<number> {
+  let countryCode: string | null = null
+  if (opts.location) {
+    countryCode = resolveCountryCode(opts.location)
+    if (!countryCode) {
+      writeError(
+        `"${opts.location}" isn't a market GetOnBoard covers or a recognized 2-letter code - see SKILL.md for the supported list (Argentina, Chile, Colombia, Mexico, Peru, Ecuador, Costa Rica, Spain)`,
+        "BAD_LOCATION",
+      )
+      return 1
+    }
+  }
   try {
-    let cards: JobCard[]
-    let matchedVia: string
+    const data = await apiFetch<SearchResponse>(buildUrl(opts, countryCode))
+    let rawJobs: RawJob[] = data?.data ?? []
 
-    if (opts.query) {
-      ;({ cards, matchedVia } = await resolveQuery(opts.query))
-    } else if (opts.location) {
-      const citySlug = slugifyQuery(opts.location)
-      const html = await htmlFetch(`${BASE_URL}/jobs/city/${citySlug}`)
-      cards = parseJobCards(html)
-      matchedVia = `city:${citySlug}`
-    } else {
-      const html = await htmlFetch(`${BASE_URL}/jobs/programming`)
-      cards = parseJobCards(html)
-      matchedVia = "default:programming"
-    }
-
-    // Location does not combine with tag/category/keyword search server-side
-    // (confirmed: no path combination works) — applied client-side instead.
-    if (opts.query && opts.location) {
-      const needle = opts.location.trim().toLowerCase()
-      cards = cards.filter((c) => (c.location || "").toLowerCase().includes(needle))
-    }
-
-    // jobage: GetOnBoard's search cards only expose a year-less "Mon D" badge,
-    // normalized to ISO by helpers.ts on a best-effort basis. Cards where that
-    // normalization failed (date === null) are excluded once a finite cutoff
-    // is requested, since recency can't be verified for them.
     if (opts.jobage < 9999) {
-      cards = cards.filter((c) => {
-        const age = daysSince(c.date)
-        return age !== null && age <= opts.jobage
-      })
+      rawJobs = rawJobs.filter((j) => daysSinceEpochSeconds(j.attributes.published_at) <= opts.jobage)
     }
 
-    // --page is accepted for CLI-contract consistency but has no effect:
-    // GetOnBoard's public listings do not support page-based navigation
-    // (confirmed: ?page=2 returns byte-identical results to ?page=1 on both
-    // tag- and category-scoped listings; the site uses JS infinite-scroll
-    // instead). See url-reference.md.
+    let cards = rawJobs.map(toJobCard)
     if (opts.limit !== undefined && opts.limit >= 0) cards = cards.slice(0, opts.limit)
 
     if (opts.format === "table") {
@@ -119,16 +71,20 @@ export async function runSearch(opts: SearchOpts): Promise<number> {
     } else if (opts.format === "plain") {
       process.stdout.write(
         cards
-          .map(
-            (c) =>
-              `${c.title}\n  ${c.company || "—"} · ${c.location || "—"} · ${c.date || "—"}\n  id: ${c.id}\n  ${c.url}`,
-          )
+          .map((c) => `${c.title}\n  ${c.company || "—"} · ${c.location || "—"} · ${c.date || "—"}\n  id: ${c.id}\n  ${c.url}`)
           .join("\n\n") + "\n",
       )
     } else {
       process.stdout.write(
         JSON.stringify(
-          { meta: { count: cards.length, page: opts.page, matchedVia }, results: cards },
+          {
+            meta: {
+              count: cards.length,
+              page: data?.meta.page ?? opts.page,
+              totalPages: data?.meta.total_pages ?? null,
+            },
+            results: cards,
+          },
           null,
           2,
         ) + "\n",

@@ -309,7 +309,7 @@ This fork additionally ships ten Argentina/LatAm portal CLIs, scaffolded the sam
 
 **Argentina/LatAm market portals** (`enabled: true` by default):
 
-- **`getonboard-search`** — [getonbrd.com](https://www.getonbrd.com), LatAm tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain). See `.agents/skills/getonboard-search/SKILL.md` and `url-reference.md` for access notes (its `robots.txt` names specific AI crawlers as disallowed — read the personal-use warning before relying on it).
+- **`getonboard-search`** — [getonbrd.com](https://www.getonbrd.com), LatAm tech/startup jobs (Chile, Colombia, Mexico, Argentina, Peru, Ecuador, Costa Rica, Spain), via GetOnBoard's official public REST API (real full-text search and pagination — rebuilt from an earlier HTML-scraping version after a community-index review flagged the documented API). See `.agents/skills/getonboard-search/SKILL.md` and `url-reference.md` for access notes (its `robots.txt` names specific AI crawlers as disallowed — read the personal-use warning before relying on it).
 - **`computrabajo-search`** — [ar.computrabajo.com](https://ar.computrabajo.com), Argentina. Server-rendered, path-segment search, good multi-word query support.
 - **`bumeran-search`** / **`zonajobs-search`** — [bumeran.com.ar](https://www.bumeran.com.ar) / [zonajobs.com.ar](https://www.zonajobs.com.ar), Argentina (Navent group, shared backend behind Cloudflare — `zonajobs-search` filters out cross-posted Bumeran duplicates automatically).
 - **`empleosit-search`** — [empleosit.com.ar](https://www.empleosit.com.ar), Argentina-only, IT/tech roles exclusively across all seniority levels. Server-rendered HTML, no auth.

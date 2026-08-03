@@ -75,10 +75,25 @@ describe("GetOnBoard CLI flag validation", () => {
   describe("existing validations (regression)", () => {
     test("all valid flags produce no BAD_ARG", async () => {
       const result = await runCLI([
-        "search", "-q", "react", "-l", "Buenos Aires", "--jobage", "30", "--page", "1", "--limit", "5",
+        "search", "-q", "react", "-l", "Argentina", "--jobage", "30", "--page", "1", "--limit", "5",
       ]);
       const err = parsedStderr(result.stderr);
       expect(err.code).not.toBe("BAD_ARG");
+    });
+  });
+
+  describe("--location validation", () => {
+    test("an uncovered market is a clean BAD_LOCATION, not a silent pass-through", async () => {
+      const result = await runCLI(["search", "-l", "Brazil"]);
+      expect(result.exitCode).not.toBe(0);
+      const err = parsedStderr(result.stderr);
+      expect(err.code).toBe("BAD_LOCATION");
+    });
+
+    test("a bare 2-letter code is accepted", async () => {
+      const result = await runCLI(["search", "-l", "AR", "--limit", "1"]);
+      const err = parsedStderr(result.stderr);
+      expect(err.code).not.toBe("BAD_LOCATION");
     });
   });
 });

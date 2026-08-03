@@ -1,180 +1,148 @@
 # GetOnBoard (getonbrd.com) URL Reference
 
-Public, unauthenticated pages used by this skill. Server-rendered Rails + Turbo app —
-no JSON API, no `__NEXT_DATA__`, no JSON-LD. All endpoints below were fetched and
-verified live during Step 2/4 investigation (July 2026); update this file if the
-markup or routing changes.
+GetOnBoard's official, public **REST API**, documented at
+`https://www.getonbrd.com/api-doc.html` (a [Scalar](https://scalar.com) viewer
+loading the real spec from `https://www.getonbrd.com/doc/openapi.yaml`). This
+replaces this skill's earlier HTML-scraping implementation (regex over
+server-rendered Rails pages) - found live during a community-index review
+(August 2026) that flagged the old `url-reference.md`'s "no JSON API" claim as
+outdated. All endpoints below were fetched and verified live during that
+investigation; update this file if the API's shape changes.
 
-## There is no free-text search parameter
+## Public vs. private API surface — only one endpoint is actually public
 
-The header search box (`id="search_form"`, input `id="search_term"`) is a client-side
-widget only — its `<input>` has no `name` attribute, and the form has no working
-server-side query param. Verified: `?query=react`, `?search_term=react`, and
-`/jobs/tag/react?search_term=senior` all return **byte-for-byte the same** default
-listing regardless of the value passed (confirmed by diffing responses). Real search
-happens through path segments instead.
+The spec documents several `/api/v0/jobs*` paths, but most require an API key:
 
-## Search: tag pages
+| Endpoint | `security` in spec | Confirmed live |
+|---|---|---|
+| `GET /api/v0/search/jobs` | none | Real data, no auth, `200` |
+| `GET /api/v0/jobs/{id}` ("Retrieve a job") | `ApiKeyAuth` | `401 Unauthorized` without a key |
+| `GET /api/v0/jobs` ("List company jobs") | `ApiKeyAuth` | Not tested further - self-evidently the authenticated company's own job list, not a public browse endpoint |
 
-```
-GET https://www.getonbrd.com/jobs/tag/<slug>
-```
+**This skill only ever calls `/api/v0/search/jobs`.** There is no dedicated
+public single-job GET endpoint - `detail` works around that (see below), the
+same shape as `himalayas-search`'s equivalent problem.
 
-A specific skill/technology tag. Example verified live: `/jobs/tag/react` -> 50 results,
-all genuinely React-relevant (`Full-Stack Developer (Node.js React)`, `Senior Full-Stack
-(Ruby, React) Developer`, etc. — confirmed by inspecting titles, not just result count).
-
-A shortcut form also exists and is sometimes the canonical redirect target of the
-`/jobs/tag/<slug>` form: `/jobs-<slug>` (e.g. `/jobs/tag/reactjs` 301s to `/jobs-reactjs`,
-28 results — a *different*, narrower tag than `react`). This CLI always requests
-`/jobs/tag/<slug>` and follows redirects; it does not separately try `/jobs-<slug>`.
-
-**This endpoint never 404s, and matching is looser than a strict single-tag lookup.**
-An unknown slug still returns `200` with a templated `"<Slug> jobs | Get on Board"`
-page — sometimes genuinely empty (0 result cards; verified with pure gibberish like
-`zzxxqqggibberishnonsense123`), but sometimes GetOnBoard resolves a made-up
-multi-word compound slug against individually-recognized words and returns a real,
-fairly large result set (verified live: the invented slug
-`senior-backend-platform-infrastructure` returned 100 real results, evidently OR-ish
-matching on "senior"/"backend"/"platform"/"infrastructure" rather than requiring an
-exact tag). Net effect: this CLI's tier 1 is more forgiving than "only works for a
-literal known tag" — but because it never 404s, **this CLI does not rely on response
-status to decide whether tier 1 "worked"; it counts parsed result cards instead**,
-which is correct regardless of which of these behaviors a given slug hits.
-
-## Search: category pages
+## Search endpoint
 
 ```
-GET https://www.getonbrd.com/jobs/<category-slug>
+GET https://www.getonbrd.com/api/v0/search/jobs
 ```
 
-Known category slugs (from the site nav): `programming`, `design-ux`,
-`data-science-analytics`, `digital-marketing`, `sales`, `hr`, `customer-support`,
-`cybersecurity`, `mobile-developer`, `machine-learning-ai`, `sysadmin-devops-qa`,
-`operations-management`, `innovation-agile`, `hardware-electronics`,
-`education-coaching`, `advertising-media`, `other`.
+| Param | Notes |
+|-------|-------|
+| `query` | Free-text search. Real full-text search, confirmed live - a genuine improvement over the old implementation's tag/category-only matching. |
+| `country_code` | **ISO 3166-1 alpha-2 only** - confirmed live: `ARG` (alpha-3) is rejected with a clean `422 {"message":"Country code should be an ISO 3166-1 alpha-2 code",...}`. **The OpenAPI spec's own example value, `"CHL"`, is wrong** - don't trust it, this was caught by testing, not by reading the spec. |
+| `remote` | `true`/`false`. **Mutually exclusive with `country_code`** - confirmed live: passing both gives a clean `422 {"message":"Localization conflict. Do not pass country code and remote parameters at the same time...`. This skill doesn't expose a `--remote` flag for that reason (would conflict with `--location`); `remote=false` combined with `country_code` was also tried and didn't error, but didn't actually filter out remote postings either (same result set as no `remote` param) - not relied upon. |
+| `companies` | JSON array of company slugs, e.g. `["ncube"]`. Used by `detail` (see below), not exposed as a `search` flag. |
+| `page` / `per_page` | Real server-side pagination, confirmed live (`page=2` returns a distinct, non-overlapping slice; max `per_page` is 120). Response `meta.total_pages` is real. **This is the single biggest capability gain over the old HTML implementation, which had no pagination at all** (`?page=2` returned byte-identical results). |
+| `expand` | A JSON array of relationship names to inline, e.g. `["company","seniority","modality"]`. Must be passed as the **raw** JSON string to `URLSearchParams` (which encodes it) - see the double-encoding quirk below. |
+| `lang` | Response locale (`en`/`es`/`pt`). Not exposed as a flag; left at the API's default. |
+| `board_host`, `featured` | Not used by this skill. |
 
-`/jobs/programming` (343 results at verification time) is the default/fallback listing
-this CLI uses when `--query` doesn't resolve to a real tag or category, and when no
-`--query`/`--location` is given at all — a reasonable default for frontend/software
-roles. Plain `/jobs` (no suffix) returns a smaller, apparently differently-capped
-slice of the same Programming listing (155 vs 343 results in a side-by-side fetch) —
-use `/jobs/<category>` explicitly rather than the bare path.
+### Quirk: relationship fields need `expand`, and their `id` representation changes when you use it
 
-## Search: city pages
+Without `expand`, `company`/`seniority`/`modality` on each job are bare
+`{data: {id, type}}` references with **numeric** ids (e.g. company `id: 12414`).
+With `expand=["company","seniority","modality"]`, the same fields become
+`{data: {id, type, attributes: {...}}}` - and the `id` itself changes to the
+human-facing **slug** (e.g. `"grupo-mariposa"`), confirmed live on the same job
+in both forms. This skill always requests all three expansions, both because
+it needs the human-readable `name` attributes (company name, seniority level,
+employment type) and because the **slug-form `id` is required** for the
+`companies=` filter `detail` depends on (a numeric id doesn't work there -
+not separately tested, since the slug form was already the one this skill
+needed regardless).
 
-```
-GET https://www.getonbrd.com/jobs/city/<city-slug>
-```
+### Quirk: pre-encoding the `expand` value and handing it to `URLSearchParams` double-encodes it
 
-Verified city slugs: `bogota`, `buenos-aires`, `ciudad-de-mexico`, `lima`, `montevideo`,
-`queretaro`, `quito`, `santiago`, `valencia-venezuela`, `vina-del-mar`. `rosario` also
-resolves (200) but currently has 0 active listings — a legitimate empty result, not a
-bug. No country-level path exists (`/jobs/country/argentina` -> 404); Buenos Aires is
-the only Argentina-specific city path surfaced by the site.
+Caught live during Step 4 verification: an early version of `buildExpandParam()`
+returned an already-`encodeURIComponent`-ed string. Passed through
+`URLSearchParams.set()` (which encodes its input itself), the `%5B%22...`
+became `%255B%2522...` - the API rejected the resulting malformed `expand`
+value with a bare `500 Internal Server Error` (no helpful message, unlike its
+other 4xx errors). Fixed by having `buildExpandParam()` return the **raw** JSON
+string; `URLSearchParams`-based callers (`search.ts`) pass it straight to
+`.set()`, and template-literal-based callers (`detail.ts`, which builds
+`companies=`/`expand=` URLs by hand for the company-scoped resolution) wrap it
+in `encodeURIComponent()` themselves.
 
-**Tag/category and city do not combine via URL.** Both orderings were tested and both
-404: `/jobs/tag/react/city/buenos-aires` and `/jobs/city/buenos-aires/tag/react`. This
-CLI works around that by fetching the tag/category/keyword result set and applying
-`--location` as a **client-side substring filter** over each card's parsed `location`
-text when both `--query` and `--location` are given. When only `--location` is given,
-it fetches the city page directly (a real, server-side scoped listing).
+### Job fields (present on every search result — this is also full detail, not a preview)
 
-## No pagination
+`description`, `projects`, `functions`, `benefits`, and `desirable` are the
+**complete** rich-text fields on every search result, confirmed live (not
+truncated) - there is no separate, richer "detail" payload to fetch elsewhere.
+This skill's `description` field maps to the API's `description` (the core job
+description); `projects`/`functions`/`benefits`/`desirable` aren't currently
+surfaced but are available if a future revision wants them.
 
-`?page=2` was tested against both a tag-scoped listing (`/jobs/tag/react`) and the
-larger category listing (`/jobs/programming`) and returned **identical** content to
-`?page=1` in both cases (byte-diffed). The site loads additional results via
-client-side infinite scroll (a `data-controller` reference to "infinite" scrolling was
-found in the page bundle), which this CLI does not replicate. `--page` is accepted for
-CLI-contract consistency but is a no-op; use `--limit` to cap output from whatever
-single batch the listing returns (50 for most tags, ~343 for Programming).
+| Field | Notes |
+|-------|-------|
+| `id` (top-level, on the job object) | The job's own slug, e.g. `"ai-engineer-senior-grupo-mariposa-remote"` - **not** globally unique across companies on its own (see composite id below) |
+| `title` | |
+| `description` | Full HTML, confirmed live (not truncated) |
+| `remote` / `remote_modality` | Boolean + a modality string (`remote_local`, `remote_global`, ...) |
+| `countries` | **Already a human-readable string array** (e.g. `["Remote"]`, or real country names for non-remote postings) - no expand needed for this one |
+| `category_name` | e.g. `"Programming"` |
+| `min_salary` / `max_salary` | Integer or `null` - `null`/`null` means undisclosed, not zero |
+| `published_at` | Unix **seconds** - confirmed live (`1785458760` decodes to 2026-07-31 as seconds; as milliseconds it would be 1970) |
+| `applications_count` | Not surfaced by this skill, available if wanted later |
+| `seniority` (expanded) | `.data.attributes.name`, e.g. `"Senior"` |
+| `modality` (expanded) | `.data.attributes.name`, e.g. `"Full time"` - maps to this skill's `employmentType` |
+| `company` (expanded) | `.data.id` (slug) and `.data.attributes.name` |
 
-## Detail page
+`location_cities` / `location_regions` also exist as expandable relationships,
+but were empty (`{"data": []}`) on every real remote posting checked - the
+already-human-readable `countries` field is sufficient for this skill's
+`location` output and doesn't need expansion.
 
-```
-GET https://www.getonbrd.com/jobs/<slug>
-```
+## No dedicated detail endpoint — company-scoped resolution, same shape as `himalayas-search`
 
-`<slug>` is the trailing path segment of any job URL (e.g.
-`desarrollador-senior-full-stack-tcit-santiago`). This bare `/jobs/<slug>` form is a
-**universal shortcut**: verified live that it 302-redirects to the job's true canonical
-URL regardless of the original category/locale prefix the card was scraped with
-(`/jobs/programming/...`, `/empleos/programacion/...`, `/jobs/programacion/...` all
-redirect correctly from the bare form). A nonexistent slug 404s cleanly. This CLI always
-fetches via the bare form and follows redirects, so `detail <id>` works whether `id`
-came from a search result or was typed by hand.
+Because there's no public single-job GET, `detail <id>` re-queries `/search/jobs`
+scoped to the job's company (`companies=["<slug>"]`, confirmed live to work and
+usually a handful of results) and matches the entry whose own `id` equals the
+requested job slug. **This is why this skill's `id` is a composite
+`"<companySlug>/<jobSlug>"`, not the bare job slug** - `detail` needs the
+company slug up front to scope that search at all.
 
-### Fields (schema.org microdata — no JSON-LD block, but reliable inline `itemprop` attributes)
+For a bare job slug or full job URL (not this skill's own composite id - e.g.
+hand-typed, or pasted from a browser) there's no company slug available.
+`detail` falls back to a **best-effort full-text search** over a few
+significant words extracted from the slug (`query=<words>`, `per_page=120`),
+matching by exact job id among the results. This is strictly better than the
+old implementation's fallback (a keyword filter over one fixed category page)
+since it's now backed by the API's real full-text search - but it's still a
+guess, and a slug whose distinguishing words don't surface it within 120
+results won't resolve. Prefer ids from this skill's own `search` output, which
+resolve directly and cheaply.
 
-| Field | Source |
-|-------|--------|
-| Title | `<span itemprop="title">` inside the `<h1 class="gb-landing-cover__title...">` |
-| Company name | `<strong itemprop="name">` inside the `itemprop="hiringOrganization"` block |
-| Company URL | the `href` on the `<a>` wrapping that `<strong itemprop="name">` (relative; resolve against the base URL) |
-| Employment type | `<span class="hide" itemprop="employmentType">` (e.g. `FULL_TIME`) |
-| Seniority | `<span itemprop="qualifications">` (e.g. `Senior`) — inside the same `<h2>` as location |
-| Location | `<span itemprop="jobLocation">` -> `itemprop="address"` -> `.location` span. **Strip the hidden tooltip div first** (see below) or the cleaned text duplicates the city name inside an explanatory sentence. |
-| Category | the last `<a href="/jobs/<slug>">` inside the same `<h2>` as location/seniority |
-| Salary | `<span itemprop="baseSalary">`, human-readable range inside a nested `<strong>` (e.g. `$2400 - 3000`) plus a trailing unit (`USD/month`). Structured `minValue`/`maxValue`/`currency` spans also exist if a numeric range is ever needed. |
-| Posting date | `<time datetime="..." itemprop="datePosted">` — full ISO 8601, unlike search cards (see below) |
-| Description | `<div id="job-body" itemprop="description">` — nested `<div>`/`<p>`/`<ul>`/`<h3>` rich text, decode entities and strip tags, keep block-level breaks as newlines |
-| Apply link | `<a id="apply_bottom" href="...">` — usually GetOnBoard's own `/applications/new` flow, not necessarily the employer's external site |
+## Country coverage (`--location` / `country_code`)
 
-### The hidden location tooltip (applies to both search cards and detail pages)
+GetOnBoard covers a fixed set of markets (from the site's own nav, unchanged
+from the old implementation's coverage claim): Argentina (`AR`), Chile (`CL`),
+Colombia (`CO`), Mexico (`MX`), Peru (`PE`), Ecuador (`EC`), Costa Rica (`CR`),
+Spain (`ES`). This skill resolves a market name (English or Spanish, with or
+without accents) or a bare alpha-2 code to the code the API expects; an
+unrecognized value is a clean `BAD_LOCATION` error rather than silently
+passing an invalid `country_code` through to a confusing API `422`.
 
-Hybrid/multi-city postings embed a hidden explanatory sentence right next to the
-visible city name:
+**No city-level filter exists in this API** (unlike the old HTML
+implementation's `/jobs/city/<slug>` pages) - only whole-country scoping. This
+is a real, documented capability loss traded for everything the real API gains
+(true full-text search, real pagination, exact dates, richer fields, an
+officially sanctioned access path instead of a scrape). `location_cities`
+being empty on real remote postings (see above) means there's no reliable city
+data to filter on even client-side in most cases.
 
-```html
-<a href="/jobs/city/santiago">Santiago</a><div class="location-tooltip-content hide">
-This job is performed partly from home and partly at the office in: Santiago
-</div>
-(Hybrid)
-```
+## Access checks (unchanged from the HTML-scraping investigation, still applies to the API host)
 
-Naively stripping tags without removing the `hide`-classed div first produces
-`"Santiago This job is performed partly from home and partly at the office in: Santiago
-(Hybrid)"`. This skill removes `<div class="location-tooltip-content...">...</div>`
-before cleaning, yielding `"Santiago (Hybrid)"`. Remote postings don't have this
-tooltip div at all — they render as plain text, e.g. `"Remote (Chile)"`,
-`"Remote (Chile and Colombia)"`, `"Remote (8 locations)"`.
-
-## Search-result card fields
-
-Each result is an `<a class="results-item ...">` (a small number are
-`results--boosted` featured listings with extra classes — same structure otherwise).
-
-| Field | Source |
-|-------|--------|
-| id / url | the card's own `href` (trailing path segment = id, same shortcut logic as detail) |
-| Title | `<h4 class="results-list-title"><strong>` (may contain a leading `<i>` "featured" icon — stripping tags handles this) |
-| Company | the first `<strong>` inside `.size0.flex.gap-1.items-center`. Some listings are agency-posted and show `<strong>Agency</strong> for ClientName` — this CLI captures the immediate poster (`Agency`), not the client name, matching what most cards show directly. |
-| Company URL | **not present on search cards** (only on detail pages) — always `null`, not fabricated. |
-| Location | same `.location` span + hidden-tooltip-stripping as detail pages. |
-| Date | `<div class="opacity-half size0">` right after `.gb-results-list__badges`, e.g. `"Jul 24"`, `"jul 27"` (casing is inconsistent; **no year**). Normalized to an ISO date by assuming the most recent past occurrence of that month/day (rolled back a year if the naive guess would be in the future). Best-effort — there is no portal-supplied year to confirm against. |
-
-## Access checks (Step 2)
-
-- **No login required.** All search/detail/city/tag/category pages returned `200` to
-  plain unauthenticated `GET` requests.
-- **`robots.txt`** (`https://www.getonbrd.com/robots.txt`): `User-agent: *` ->
-  `Allow: /`, with `Content-Signal: search=yes, ai-train=no, use=reference`. Separately,
-  it explicitly lists `Disallow: /` for a set of named AI-crawler user agents:
-  **`ClaudeBot`**, `GPTBot`, `CCBot`, `Google-Extended`, `Bytespider`, `Amazonbot`,
-  `Applebot-Extended`, `meta-externalagent`, `CloudflareBrowserRenderingCrawler`. This
-  CLI identifies with a generic browser User-Agent string, not any of those crawler
-  identities, but the finding is called out prominently in `SKILL.md` since it names
-  Claude specifically.
-- **Terms of Service** (`/pages/get-on-board-terms-and-conditions-agreement`): contains
-  clauses prohibiting automated copying/downloading of "GoB IP" and using the platform
-  "to train models, develop semantic or neural network software" — but these are
-  contractually scoped to the defined **"Customer"** party (the paying companies that
-  post jobs and use GoB's software/API), inside a section governing the Customer's
-  software/API license. No general anti-automation clause addressed to ordinary site
-  visitors or job-seekers ("Professionals", GetOnBoard's term for candidates) was found.
-- **Net determination**: proceeds under the repo's "restricts but doesn't outright
-  forbid" policy — no login wall, generic UA explicitly allowed, and the only ToS
-  automation restriction found is scoped to a different contracting party. See the
-  personal-use warning in `SKILL.md` for what this means in practice (low volume,
-  no bulk/commercial use, no AI-training use of results).
+Same `robots.txt` (`www.getonbrd.com`) as before: generic `User-agent: *` ->
+`Allow: /` (no path scoped disallow, `/api/` included), separately listing
+`Disallow: /` for named AI-crawler user agents including `ClaudeBot` - see
+`SKILL.md`'s personal-use section for the same reasoning as before (this CLI
+sends a generic browser UA, not a named crawler identity). The Terms of
+Service analysis from the earlier investigation (automation-restriction
+clauses scoped to the paying "Customer" company party, not ordinary visitors)
+stands unchanged; if anything, using the **documented, officially published**
+API is a stronger footing than the earlier HTML-scraping approach, not a
+weaker one.

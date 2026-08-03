@@ -1,23 +1,20 @@
-// Data source: getonbrd.com (Get on Board) public job-listing and job-detail pages.
-// No authentication required. GetOnBoard has no JSON API and no working free-text
-// search parameter — its header search box is a client-side widget only; the
-// `query`/`search_term` query-string params are silently ignored server-side (the
-// response is identical with or without them). Real search happens through
-// tag/category path segments instead:
-//   /jobs/tag/<slug>   - a specific skill/tech tag, e.g. /jobs/tag/react
-//   /jobs/<category>   - a whole category, e.g. /jobs/programming
-//   /jobs/city/<slug>  - a specific city, e.g. /jobs/city/buenos-aires
-// See ../url-reference.md for the full endpoint map and how this CLI's `search`
-// command falls back across tag -> category -> keyword-filtered category listing
-// when a free-text query doesn't match a known tag.
+// Data source: GetOnBoard's official public REST API (https://www.getonbrd.com/api/v0),
+// documented at https://www.getonbrd.com/api-doc.html (OpenAPI spec served from
+// /doc/openapi.yaml). Confirmed live during Step 2 investigation (August 2026):
+// `GET /api/v0/search/jobs` has no `security` requirement in the spec and returns
+// real data to a plain unauthenticated fetch - this is a genuinely public,
+// documented endpoint, not a scrape. Every other jobs-related endpoint
+// (`GET /api/v0/jobs/{id}`, `GET /api/v0/jobs`) requires `ApiKeyAuth` (confirmed
+// live: both return 401 without one) - they're for the authenticated company
+// managing its own postings, not public read access. This skill therefore only
+// ever calls `/api/v0/search/jobs`, same as every command below.
 //
-// Both search-result cards and job-detail pages carry reliable schema.org
-// microdata (itemprop attributes), which this file parses with chunked regex —
-// the markup is server-rendered (Rails + Turbo) and stable enough that a full
-// DOM parser is unnecessary, matching the zero-dependency approach used by the
-// other portal skills in this repo (see linkedin-search/cli/src/helpers.ts).
+// This replaces an earlier HTML-scraping implementation of this skill (regex over
+// getonbrd.com's server-rendered pages) that predated discovering this API. See
+// ../url-reference.md for the full investigation and the specific quirks below.
 
-export const BASE_URL = "https://www.getonbrd.com"
+export const API_BASE = "https://www.getonbrd.com/api/v0"
+export const SITE_BASE = "https://www.getonbrd.com"
 
 export function writeError(error: string, code: string): void {
   process.stderr.write(JSON.stringify({ error, code }) + "\n")
@@ -28,23 +25,18 @@ const UA =
   "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 /**
- * Fetch HTML with exponential backoff on 429/5xx. Returns "" on a 404 rather
- * than throwing (a missing tag/city/job slug is an expected, not exceptional,
- * outcome here). Follows redirects — GetOnBoard canonicalizes some shortcut
- * paths (e.g. /jobs/tag/reactjs -> /jobs-reactjs) and the /jobs/<slug> detail
- * shortcut this CLI relies on (see normalizeId below).
+ * Fetch JSON with exponential backoff on 429/5xx. Returns null on a 404. On a
+ * non-2xx response, the API's own clean `{"message": "...", "code": "..."}`
+ * body (confirmed live, e.g. `{"message":"Country code should be an ISO 3166-1
+ * alpha-2 code","code":"unprocessable_content"}`) is surfaced as the thrown
+ * error message, so callers see GetOnBoard's own explanation.
  */
-export async function htmlFetch(url: string): Promise<string> {
+export async function apiFetch<T = unknown>(url: string): Promise<T | null> {
   const maxRetries = 6
   let delay = 500
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const response = await fetch(url, {
-      headers: {
-        "User-Agent": UA,
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "es-419,es;q=0.9,en;q=0.8",
-      },
-      redirect: "follow",
+      headers: { "User-Agent": UA, Accept: "application/json" },
       signal: AbortSignal.timeout(15000),
     })
     if (response.status === 429 || response.status >= 500) {
@@ -56,20 +48,71 @@ export async function htmlFetch(url: string): Promise<string> {
       delay = Math.min(delay * 2, 8000)
       continue
     }
-    if (response.status === 404) return ""
+    if (response.status === 404) return null
+    const body: unknown = await response.json().catch(() => null)
     if (!response.ok) {
-      throw new Error(`Request failed: ${response.status} ${response.statusText}`)
+      const b = body as { message?: string; code?: string } | null
+      throw new Error(b?.message ? String(b.message) : `Request failed: ${response.status} ${response.statusText}`)
     }
-    return response.text()
+    return body as T
   }
   throw new Error("Request failed after max retries")
 }
 
+/**
+ * JSON:API relationships (company/seniority/modality) are bare `{id, type}`
+ * references unless `expand` is requested - and the response ID representation
+ * itself CHANGES with expand (confirmed live: a company's unexpanded `id` is a
+ * numeric internal id like `12414`, but the SAME company's expanded `id` is its
+ * slug, e.g. `"grupo-mariposa"`). This CLI always requests expand for all three,
+ * so `id` is consistently the slug form throughout - required for the
+ * `companies=` filter used by `detail` (see below) to work at all.
+ */
+/**
+ * Returns the RAW (unencoded) query value - pass to `URLSearchParams.set`,
+ * which encodes it itself. Bug caught live during Step 4 verification: an
+ * earlier version returned a pre-encoded string, and passing that through
+ * `URLSearchParams` double-encoded it (`%5B%22...` became `%255B%2522...`),
+ * which the API rejected with a 500. Callers building a URL by string
+ * concatenation instead of `URLSearchParams` (see detail.ts) must call
+ * `encodeURIComponent` on this themselves.
+ */
+export function buildExpandParam(): string {
+  return JSON.stringify(["company", "seniority", "modality"])
+}
+
+interface ExpandedRef {
+  data: { id: string; type: string; attributes?: Record<string, unknown> } | null
+}
+
+export interface RawJob {
+  id: string // the job's own slug, e.g. "ai-engineer-senior-grupo-mariposa-remote"
+  attributes: {
+    title: string
+    description: string // full HTML, NOT truncated - confirmed live, same field on search results as would-be detail
+    remote: boolean
+    remote_modality: string
+    countries: string[] // already human-readable, e.g. ["Remote"] or real country names
+    category_name: string
+    min_salary: number | null
+    max_salary: number | null
+    published_at: number // unix SECONDS - confirmed live (1785458760 -> 2026-07-31, not 1970)
+    applications_count: number
+    seniority?: ExpandedRef
+    modality?: ExpandedRef
+    company?: ExpandedRef
+  }
+}
+
+export interface SearchResponse {
+  data: RawJob[]
+  meta: { page: number; per_page: number; total_pages: number }
+}
+
 export interface JobCard {
-  id: string
+  id: string // "<companySlug>/<jobSlug>" - see resolveDetail below for why
   title: string
   company: string | null
-  companyUrl: string | null
   location: string | null
   date: string | null
   url: string
@@ -81,308 +124,150 @@ export interface JobDetail extends JobCard {
   employmentType: string | null
   category: string | null
   salary: string | null
+  companyUrl: string | null
   applyUrl: string | null
 }
 
-/**
- * Convert a Unicode code point to a string. Uses `fromCodePoint` (not
- * `fromCharCode`) so supplementary-plane code points (e.g. emoji, U+1F600)
- * decode correctly, and drops out-of-range values instead of throwing.
- */
 function numericEntity(cp: number): string {
   return cp >= 0 && cp <= 0x10ffff ? String.fromCodePoint(cp) : ""
 }
 
-// GetOnBoard's postings are predominantly Spanish, and (unlike the mostly-English
-// content the other portal skills in this repo parse) some of its rich-text job
-// descriptions use named entities for accented characters instead of raw UTF-8
-// or numeric references — e.g. "consultor&iacute;a" for "consultoría". Numeric
-// entities alone (already handled below) aren't enough to cover that.
+// Same named-entity table the old HTML-scraping implementation needed - the
+// API's HTML-formatted `description` field carries the same accented-character
+// named entities (e.g. "consultor&iacute;a") as the site's rendered pages.
 const NAMED_ENTITIES: Record<string, string> = {
+  amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ",
   aacute: "á", eacute: "é", iacute: "í", oacute: "ó", uacute: "ú",
   Aacute: "Á", Eacute: "É", Iacute: "Í", Oacute: "Ó", Uacute: "Ú",
-  agrave: "à", egrave: "è", igrave: "ì", ograve: "ò", ugrave: "ù",
-  auml: "ä", euml: "ë", iuml: "ï", ouml: "ö", uuml: "ü",
-  Uuml: "Ü", Ouml: "Ö", Auml: "Ä",
-  ntilde: "ñ", Ntilde: "Ñ",
-  ccedil: "ç", Ccedil: "Ç",
-  iexcl: "¡", iquest: "¿",
-  ordf: "ª", ordm: "º",
+  ntilde: "ñ", Ntilde: "Ñ", uuml: "ü", Uuml: "Ü", iexcl: "¡", iquest: "¿",
 }
 
-function decodeHtmlEntities(text: string): string {
+export function decodeHtmlEntities(text: string): string {
   return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    // Numeric character references: decimal (&#233;) and hexadecimal (&#xE9;).
     .replace(/&#(\d+);/g, (_, dec) => numericEntity(parseInt(dec, 10)))
     .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, hex) => numericEntity(parseInt(hex, 16)))
-    .replace(/&([A-Za-z]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m)
-    // GetOnBoard's multi-city location markup ("Montevideo&nbspSantiago") uses
-    // a bare &nbsp with no trailing semicolon between city names — tolerate
-    // the missing semicolon rather than leaving the literal text in output.
-    .replace(/&nbsp;?/g, " ")
+    .replace(/&([a-zA-Z]+);/g, (full, name) => NAMED_ENTITIES[name] ?? full)
 }
 
-function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
-}
-
-function clean(html: string | undefined | null): string | null {
+export function cleanDescription(html: string | null | undefined): string | null {
   if (!html) return null
-  // stripTags already collapsed whitespace, but entity decoding (e.g. a bare
-  // &nbsp between two city names) can introduce fresh spaces afterwards —
-  // collapse once more so "Montevideo &nbsp Santiago" doesn't end up as
-  // "Montevideo   Santiago".
-  const text = decodeHtmlEntities(stripTags(html)).replace(/\s+/g, " ").trim()
+  const withBreaks = html.replace(/<\s*br\s*\/?>/gi, "\n").replace(/<\/(p|li|ul|ol|div|h\d)>/gi, "\n")
+  const text = decodeHtmlEntities(withBreaks.replace(/<[^>]+>/g, ""))
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
   return text || null
 }
 
-/**
- * Location fields (both on search cards and detail pages) embed a hidden
- * tooltip div spelling out the hybrid/remote arrangement in a full sentence
- * ("This job is performed partly from home and partly at the office in: ...").
- * It carries `class="... hide"` and would otherwise bleed into the cleaned
- * text, duplicating the city name. Strip it before cleaning.
- */
-function stripHiddenTooltip(html: string): string {
-  return html.replace(/<div class="location-tooltip-content[^"]*">[\s\S]*?<\/div>/gi, "")
+export function isoFromEpochSeconds(sec: number | null | undefined): string | null {
+  if (sec === null || sec === undefined || Number.isNaN(sec)) return null
+  return new Date(sec * 1000).toISOString()
+}
+
+export function daysSinceEpochSeconds(sec: number, now: number = Date.now()): number {
+  return Math.floor((now - sec * 1000) / 86400000)
 }
 
 /**
- * Extract the inner HTML of a <div> identified by a CSS class name or an id,
- * correctly handling nested <div> elements by tracking tag depth (adapted
- * from linkedin-search/cli/src/helpers.ts's extractDivContent).
+ * GetOnBoard covers a fixed set of LatAm/Spain markets (see SKILL.md). The API
+ * filters by ISO 3166-1 **alpha-2** only (confirmed live: alpha-3 "ARG" is
+ * rejected with a clean 422 - the OpenAPI spec's own example, "CHL", is
+ * actually wrong). This resolves a free-text market name to its alpha-2 code;
+ * an already-alpha-2 input passes through uppercased.
  */
-function extractDivContent(html: string, attr: "class" | "id", value: string): string | null {
-  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-  const openRe =
-    attr === "id"
-      ? new RegExp(`<div[^>]*id="${escaped}"[^>]*>`, "i")
-      : new RegExp(`<div[^>]*class="[^"]*${escaped}[^"]*"[^>]*>`, "i")
-  const open = openRe.exec(html)
-  if (!open) return null
+const COUNTRY_CODES: Record<string, string> = {
+  argentina: "AR",
+  chile: "CL",
+  colombia: "CO",
+  mexico: "MX",
+  méxico: "MX",
+  peru: "PE",
+  perú: "PE",
+  ecuador: "EC",
+  "costa rica": "CR",
+  spain: "ES",
+  españa: "ES",
+  espana: "ES",
+}
 
-  let i = open.index + open[0].length
-  let depth = 1
+export function resolveCountryCode(input: string): string | null {
+  const trimmed = input.trim()
+  if (/^[a-zA-Z]{2}$/.test(trimmed)) return trimmed.toUpperCase()
+  return COUNTRY_CODES[trimmed.toLowerCase()] ?? null
+}
 
-  while (depth > 0 && i < html.length) {
-    const nextOpen = html.indexOf("<div", i)
-    const nextClose = html.indexOf("</div>", i)
+function attrText(ref: ExpandedRef | undefined, field: string): string | null {
+  const v = ref?.data?.attributes?.[field]
+  return typeof v === "string" && v ? v : null
+}
 
-    if (nextClose === -1) return null
-
-    if (nextOpen !== -1 && nextOpen < nextClose) {
-      depth++
-      i = nextOpen + 4
-    } else {
-      depth--
-      i = nextClose + 6
-    }
+/**
+ * `id` is a composite `"<companySlug>/<jobSlug>"`, not the bare job slug -
+ * mirrors the pattern already used by `himalayas-search` for the same reason:
+ * the only public endpoint is a *search* endpoint, not a single-job GET, so
+ * `detail <id>` must re-query search scoped to the job's company (`companies=`,
+ * confirmed live to work - see url-reference.md) and needs the company slug
+ * up front to do that, not just the job's own slug.
+ */
+export function toJobCard(raw: RawJob): JobCard {
+  const companySlug = raw.attributes.company?.data?.id
+  const company = attrText(raw.attributes.company, "name")
+  const location = raw.attributes.countries?.length ? raw.attributes.countries.join(", ") : null
+  return {
+    id: companySlug ? `${companySlug}/${raw.id}` : raw.id,
+    title: raw.attributes.title,
+    company,
+    location,
+    date: isoFromEpochSeconds(raw.attributes.published_at),
+    url: `${SITE_BASE}/jobs/${raw.id}`,
   }
+}
 
-  return html.slice(open.index + open[0].length, i - 6)
+function formatSalary(min: number | null, max: number | null): string | null {
+  if (min == null && max == null) return null
+  const fmt = (n: number) => n.toLocaleString("en-US")
+  if (min != null && max != null) return `$${fmt(min)}–${fmt(max)}`
+  return `$${fmt((min ?? max) as number)}`
+}
+
+export function toJobDetail(raw: RawJob): JobDetail {
+  const card = toJobCard(raw)
+  const companySlug = raw.attributes.company?.data?.id
+  return {
+    ...card,
+    description: cleanDescription(raw.attributes.description),
+    seniority: attrText(raw.attributes.seniority, "name"),
+    employmentType: attrText(raw.attributes.modality, "name"),
+    category: raw.attributes.category_name || null,
+    salary: formatSalary(raw.attributes.min_salary, raw.attributes.max_salary),
+    companyUrl: companySlug ? `${SITE_BASE}/companies/${companySlug}` : null,
+    applyUrl: `${SITE_BASE}/jobs/${raw.id}/applications/new`,
+  }
 }
 
 /**
- * Turn free text into a GetOnBoard tag/category/city slug: lowercase, strip
- * accents (so "diseño" -> "diseno" matches the site's ASCII slugs), and
- * collapse anything non-alphanumeric into single hyphens.
+ * Parse a `detail <id>` argument. The CLI's own "<companySlug>/<jobSlug>" id
+ * (from `search` results) resolves directly and cheaply via `companies=`. A
+ * bare job slug or full job URL has no company slug attached - `jobSlug` alone
+ * is returned in that case, and `detail.ts` falls back to a best-effort
+ * `query=` search over the slug's own words to find it (see there).
  */
-export function slugifyQuery(query: string): string {
-  return query
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
-
-/** Accept a bare job slug or a full getonbrd.com job URL; return the slug. */
-export function normalizeId(input: string): string | null {
+export function parseDetailId(input: string): { companySlug: string | null; jobSlug: string } | null {
   const trimmed = input.trim()
   if (!trimmed) return null
-  if (/^https?:\/\//i.test(trimmed)) {
-    try {
-      const u = new URL(trimmed)
-      const segments = u.pathname.split("/").filter(Boolean)
-      const last = segments[segments.length - 1]
-      return last || null
-    } catch {
-      return null
-    }
-  }
-  if (/^[a-z0-9][a-z0-9-]*$/i.test(trimmed)) return trimmed
+  const slugMatch = trimmed.match(/^([a-z0-9][a-z0-9-]*)\/([a-z0-9][a-z0-9-]*)$/i)
+  if (slugMatch) return { companySlug: slugMatch[1], jobSlug: slugMatch[2] }
+  const urlMatch = trimmed.match(/\/jobs\/([a-z0-9-]+)\/?(?:\?.*)?$/i)
+  if (urlMatch) return { companySlug: null, jobSlug: urlMatch[1] }
+  if (/^[a-z0-9][a-z0-9-]*$/i.test(trimmed)) return { companySlug: null, jobSlug: trimmed }
   return null
 }
 
-const MONTHS: Record<string, number> = {
-  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
-}
-
-/**
- * Search-result cards show a year-less short date like "Jul 24" or "jul 27"
- * (casing is inconsistent). Detail pages carry a full ISO `datePosted`, but
- * cards don't, so we normalize the badge to an ISO date (YYYY-MM-DD) assuming
- * the most recent past occurrence of that month/day relative to `now` —
- * postings are never dated in the future, so if the naive guess lands after
- * `now` it must mean last year. Returns null if the text isn't "Mon D[d]".
- * Best-effort: there is no portal-supplied year to confirm this against.
- */
-export function normalizeShortDate(text: string | null, now: Date = new Date()): string | null {
-  if (!text) return null
-  const m = text.trim().match(/^([A-Za-z]{3})\.?\s+(\d{1,2})$/)
-  if (!m) return null
-  const month = MONTHS[m[1].toLowerCase()]
-  if (month === undefined) return null
-  const day = parseInt(m[2], 10)
-  if (day < 1 || day > 31) return null
-
-  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  let year = now.getUTCFullYear()
-  let candidate = Date.UTC(year, month, day)
-  if (candidate > todayUTC) {
-    year -= 1
-    candidate = Date.UTC(year, month, day)
-  }
-  return new Date(candidate).toISOString().slice(0, 10)
-}
-
-/** Whole days between an ISO date (YYYY-MM-DD) and `now`, or null if unparseable. */
-export function daysSince(iso: string | null, now: Date = new Date()): number | null {
-  if (!iso) return null
-  const then = Date.parse(iso + "T00:00:00Z")
-  if (isNaN(then)) return null
-  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  return Math.round((todayUTC - then) / 86400000)
-}
-
-/**
- * Parse a tag/category/city listing page: a flat list of `<a class="results-item...">`
- * cards. Each chunk is bounded from one card's marker to the start of the next
- * (or end of string), so a missing/malformed field in one card cannot leak
- * into, or be polluted by, its neighbor.
- */
-export function parseJobCards(html: string): JobCard[] {
-  const marker = '<a class="results-item'
-  const starts: number[] = []
-  let i = html.indexOf(marker)
-  while (i !== -1) {
-    starts.push(i)
-    i = html.indexOf(marker, i + marker.length)
-  }
-
-  const results: JobCard[] = []
-  for (let k = 0; k < starts.length; k++) {
-    const chunk = html.slice(starts[k], starts[k + 1] ?? html.length)
-    const card = parseOneCard(chunk)
-    if (card) results.push(card)
-  }
-  return results
-}
-
-function parseOneCard(chunk: string): JobCard | null {
-  const hrefMatch = chunk.match(/href="([^"]+)"/)
-  const url = hrefMatch ? decodeHtmlEntities(hrefMatch[1]) : null
-  if (!url) return null
-  const id = normalizeId(url)
-  if (!id) return null
-
-  // Bound to the <strong> itself, not the whole <h4> — the h4 also contains
-  // sibling badges ("Full time", a "hot" fire icon) that must not bleed into
-  // the title text.
-  const titleMatch = chunk.match(/results-list-title"[^>]*>\s*<strong[^>]*>([\s\S]*?)<\/strong>/i)
-  const title = titleMatch ? clean(titleMatch[1]) : null
-  if (!title) return null
-
-  const infoMatch = chunk.match(
-    /size0 flex gap-1 items-center"[^>]*>\s*<strong>([\s\S]*?)<\/strong>/i,
-  )
-  const company = infoMatch ? clean(infoMatch[1]) : null
-
-  const withoutTooltip = stripHiddenTooltip(chunk)
-  const locMatch = withoutTooltip.match(/<span class="location">([\s\S]*?)<\/span>\s*<\/span>/i)
-  const location = locMatch ? clean(locMatch[1]) : null
-
-  const dateMatch = chunk.match(/<div class="opacity-half size0">([\s\S]*?)<\/div>/i)
-  const date = normalizeShortDate(dateMatch ? clean(dateMatch[1]) : null)
-
-  return { id, title, company, companyUrl: null, location, date, url }
-}
-
-/** Parse a single job's detail page. */
-export function parseJobDetail(html: string, id: string): JobDetail {
-  const title = clean(html.match(/itemprop="title">([\s\S]*?)<\/span>/i)?.[1]) ?? "(untitled)"
-
-  const orgMatch = html.match(
-    /href="([^"]*\/companies\/[^"]+)"><strong itemprop="name">([\s\S]*?)<\/strong>/i,
-  )
-  const company = orgMatch ? clean(orgMatch[2]) : null
-  const companyUrl = orgMatch
-    ? new URL(decodeHtmlEntities(orgMatch[1]), BASE_URL).toString()
-    : null
-
-  const employmentType = clean(html.match(/itemprop="employmentType">([\s\S]*?)<\/span>/i)?.[1])
-  const seniority = clean(html.match(/itemprop="qualifications">([\s\S]*?)<\/span>/i)?.[1])
-
-  // The location/seniority/employment-mode/category line lives in one <h2>;
-  // bound to it so the location cleanup below doesn't reach into other fields.
-  const h2Match = html.match(
-    /<h2 class="size1 mb-3 font-normal lh3 mb-3">([\s\S]*?)<\/h2>/i,
-  )
-  const h2 = h2Match ? stripHiddenTooltip(h2Match[1]) : ""
-  const locationSegment = h2.split(/<span class="mx-3">\|<\/span>/i)[0] ?? ""
-  const location = clean(locationSegment)
-
-  // The category link's path prefix is locale-dependent (English pages use
-  // /jobs/<slug>, Spanish pages use /empleos/<slug>) — accept either. The
-  // single-segment constraint (no further "/") still excludes the city link
-  // earlier in the same <h2> (/jobs/city/<slug> or /empleos/ciudad/<slug>).
-  const categoryMatch = h2.match(/href="\/(?:jobs|empleos)\/[a-z0-9-]+">([\s\S]*?)<\/a>/i)
-  const category = categoryMatch ? clean(categoryMatch[1]) : null
-
-  const salaryMatch = html.match(
-    /itemprop="baseSalary"[\s\S]*?<strong>\s*([\s\S]*?)\s*<\/strong>\s*([\s\S]*?)<\/span>/i,
-  )
-  const salary = salaryMatch ? clean(`${salaryMatch[1]} ${salaryMatch[2]}`) : null
-
-  // Real attribute order is datetime before itemprop, e.g.
-  // <time datetime="2026-07-24T12:47:59+00:00" itemprop="datePosted">.
-  const dateMatch = html.match(/<time\s+datetime="([^"]+)"\s+itemprop="datePosted"/i)
-  const date = dateMatch ? dateMatch[1].slice(0, 10) : null
-
-  // Rich description block: headings/paragraphs/lists. Keep them as line breaks.
-  let description: string | null = null
-  const descHtml = extractDivContent(html, "id", "job-body")
-  if (descHtml) {
-    const withBreaks = descHtml
-      .replace(/<\s*br\s*\/?>/gi, "\n")
-      .replace(/<\/(p|li|ul|ol|div|h\d)>/gi, "\n")
-    description = decodeHtmlEntities(stripTags(withBreaks)).replace(/\n{3,}/g, "\n\n").trim() || null
-  }
-
-  const applyMatch = html.match(/id="apply_bottom"[^>]*href="([^"]+)"/i)
-  const applyUrl = applyMatch ? new URL(decodeHtmlEntities(applyMatch[1]), BASE_URL).toString() : null
-
-  return {
-    id,
-    title,
-    company,
-    companyUrl,
-    location,
-    date,
-    url: `${BASE_URL}/jobs/${id}`,
-    description,
-    seniority,
-    employmentType,
-    category,
-    salary,
-    applyUrl,
-  }
+/** Extract a few significant words from a job slug for the query-fallback search below. */
+export function wordsFromSlug(slug: string): string {
+  return slug
+    .split("-")
+    .filter((w) => w.length >= 4 && !/^\d+$/.test(w))
+    .slice(0, 4)
+    .join(" ")
 }

@@ -15,6 +15,18 @@ per-file diff commands.
 
 ### Added
 
+- **`getonboard-search` rebuilt on GetOnBoard's real public REST API** - a
+  community-index review of this fork found that `getonbrd.com` publishes a
+  documented, unauthenticated API (`https://www.getonbrd.com/api/v0/search/jobs`,
+  docs at `/api-doc.html`) that this skill's original HTML-scraping implementation
+  had missed entirely (its own `url-reference.md` incorrectly stated "no JSON API").
+  Rebuilt on the real endpoint: real full-text search (previously tag/category-only),
+  real server-side pagination (previously a no-op), exact publish dates (previously
+  inferred from a year-less date badge), and richer fields (salary, seniority,
+  employment type via `expand`). Trade-off: `--location` is now country-level only
+  (Argentina/Chile/Colombia/Mexico/Peru/Ecuador/Costa Rica/Spain) - the API has no
+  city filter, unlike the old scraper's `/jobs/city/<slug>` pages. See
+  `.agents/skills/getonboard-search/url-reference.md` for the full investigation.
 - **Dynamic per-user language deal-breaker gate** - `/setup` now captures every language you
   work in with your proficiency level as a structured table in CLAUDE.md / `01-candidate-profile.md`,
   replacing the old hardcoded English/Spanish default. `04-job-evaluation.md`'s Deal-Breaker Gate
