@@ -93,7 +93,16 @@ command (see its SKILL.md — do not guess flags) to extract **key requirements*
 **application deadline**, and a brief description snippet.
 
 **From WebSearch results:** Use `WebFetch` on the posting URL and extract the same
-fields manually.
+fields manually. If it returns HTTP 403, retry with browser headers via curl per
+`.claude/skills/job-application-assistant/09-web-research.md` before giving up — most
+bank and corporate sites reject WebFetch's user agent while serving browsers normally.
+
+**Store a URL that actually resolves to the posting.** A listing-page URL with a
+`#fragment` appended (`.../jobs/ciso/#ikerian`) is not a posting: it fetches fine and
+returns unrelated job titles, which makes every later `/rank` and `/apply` run fail on
+that entry. When WebSearch only yields a listing page, search the employer's own careers
+site for the role and store that URL instead, or drop the candidate rather than saving a
+fragment link.
 
 For every candidate:
 - Skip if the URL or company+title combo already exists in `seen_jobs.json`
@@ -229,7 +238,7 @@ If the run found many new jobs (roughly 8+), also suggest `/rank` - it batch-sco
 
 ### Step 6: Update Tracker (Optional)
 
-If the user decides to apply to any job, add a row to `job_search_tracker.csv`.
+If the user decides to apply to any job, the tracker row is written by **job-application-assistant Step 3b**, which Step 5 already routes into - do not add a second row here. Only when the user says they applied to something outside that path, add a row using the header and the match-then-update rule in `/outcome` Step 1.
 
 ---
 

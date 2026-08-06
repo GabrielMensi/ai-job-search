@@ -42,6 +42,131 @@ per-file diff commands.
   two access-restriction findings (latojobs.com's Terms, and
   simplyhired.com.ar's `robots.txt` naming `anthropic-ai` specifically)
   documented and reasoned through rather than silently bypassed.
+- **Spec-pinning tests for the Language Gate's `/rank` contract** (#278) - four regression
+  guards in `tests/test_rank_command.py` pinning the `language_gate`/`language_note` fields
+  through Steps 2-5 of `/rank`, including the Step 4 persistence rule that was live-debugged
+  during #275 (vetoes reported in console output but `language_gate: null` on every persisted
+  entry). Mirrors the existing `gaps`/`strengths` pinning pattern. No behavior change.
+
+- **The jobnet and jobdanmark CLIs identify themselves on every API request** (#283) - their
+  `apiFetch`/`apiPost` wrappers now send an explicit `User-Agent` (`jobnet-cli/1.0`,
+  `jobdanmark-cli/1.0`) instead of Bun's anonymous default token, matching the honest
+  self-identification jobindex already uses on `htmlFetch`. The new `user-agent.test.ts`
+  suites assert the header on every request wrapper. No response behavior observed to
+  change.
+
+### Changed
+
+- **The four Danish demo portals now ship disabled** (#288) - `jobindex-search`,
+  `jobbank-search`, `jobdanmark-search`, and `jobnet-search` default to `enabled: false`,
+  and `/setup`'s job-portals question now acts on the answer: it flips them to
+  `enabled: true` when your market is Denmark, and leaves them off otherwise. Previously a
+  non-Danish user's `/scrape` ran all four Danish boards by default, spending tokens
+  fetching and filtering irrelevant listings. **Fork heads-up:** if you search the Danish
+  market, set `enabled: true` in those four `SKILL.md` files after updating (or re-run
+  `/setup --section search`); forks that already curated their portal set are unaffected.
+
+### Fixed
+
+- **The robots gate did not fail closed** (`tools/robots_check.py`, #277). Found by an
+  adversarial review run over the merged file, not by inspection. Both cases are pinned
+  in `tests/test_robots_check.py` as FAIL-OPEN REGRESSIONs:
+
+  - **A soft `200` granted permission.** A host answering `/robots.txt` with an HTML
+    error page at status 200 produces a body that parses to zero rules, and zero rules
+    read as "allowed" - so the browser-header retry ran on permission that was never
+    given. A non-empty body carrying no recognised directive is now treated as
+    unreadable. A genuinely empty file stays allow-all, per RFC 9309.
+  - **`Disallow` patterns were never percent-decoded** while the request path was, so
+    `Disallow: /foo%20bar` never matched `/foo bar` and the rule was silently skipped -
+    a fail-open on any site that encodes its own rules.
+
+- **`curl` argument hardening** (`tools/robots_check.py`). The curl argv had no `--`
+  terminator before the URL. `gate()` rebuilds the target as `scheme://host/robots.txt`
+  before calling `_fetch`, so the gate path was never exposed; this is hardening for
+  direct callers, with a test pinning the terminator, that a dash-leading argument fails
+  closed end to end, and that `gate()` never passes a caller-supplied URL through to
+  curl. `--max-redirs 5` is set explicitly rather than left to curl's default.
+
+- **Negative and fractional filter flags are rejected in the Danish portal CLIs** (#281) -
+  `--jobage` (jobindex), `--radius` (jobnet), `--category`/`--jobtitle-id` (jobdanmark), and
+  `--company` (jobbank) now validate as positive integers, completing the `page`/`limit`/
+  `per-page` tightening from #191. Some portals silently ignore invalid filter values and
+  return unfiltered results, so a mistyped ID produced wrong results instead of an error.
+- **The upstream checker reports files missing from the upstream ref instead of a silent
+  `[OK]`** (#282) - if upstream renames or deletes a tracked framework file, a fork's
+  `check_upstream_updates.py` now lists it under a `[WARNING]` summary instead of skipping
+  it and printing a false all-clear.
+- **`09-web-research.md` is now tracked by the upstream checker** - the file shipped in
+  #277 but was never added to `FRAMEWORK_FILES`, so forks got no signal when it changed.
+- **jobbank and jobdanmark CLIs identify honestly** - jobbank's `User-Agent` was a full
+  Chrome browser string and jobdanmark's detail command sent a bare `Mozilla/5.0`; both now
+  use the `Mozilla/5.0 (compatible; <portal>-cli/1.0)` token the other portal CLIs use,
+  matching the identification posture settled in #277. Verified live: both portals serve
+  identical responses to the honest token.
+
+- **A `WebFetch` 403 is no longer treated as a dead posting** - `WebFetch` sends a bot user
+  agent, and many bank and corporate sites answer it with HTTP 403 while serving the same
+  page to a browser normally. Every command read that as "page unavailable" and degraded
+  silently instead of failing loudly: `/rank` marked live postings `expired`, `/apply` fell
+  back to search-result snippets or to vague cover-letter prose, and `/scrape` stored
+  listing-page `#fragment` URLs that fetch fine but return unrelated jobs, breaking every
+  later run on that entry. New `09-web-research.md` (`framework_version` 1.0.0) is the
+  single reference: the trust boundary, a curl browser-header retry with a tag-stripping
+  extractor, a four-step escalation order, the login-wall case, why the employer's own
+  careers posting beats an aggregator listing (the requisition ID and the grade survive
+  there), and the rule that a search snippet is a lead rather than a source. Wired into
+  `/apply`, `/rank`, `/interview`, `/outcome`, `/notion-sync`, the job-scraper skill, and
+  writing-style rule 5 (`03-writing-style.md` 1.1.0 to 1.2.0).
+
+  **The retry is gated on `robots.txt`.** `WebFetch` identifies itself as `Claude-User`
+  and honors `robots.txt`, so a 403 means either a WAF default on a site whose published
+  policy allows access, or a site that has actually declined. New `tools/robots_check.py`
+  tells them apart and the escalation runs it before retrying: a disallow for `*` or
+  `Claude-User` skips the retry entirely and goes straight to finding the employer's own
+  posting. The rule is stated in the file so later edits do not erode it - *the retry
+  exists to get past bot-filtering firewalls on sites whose robots.txt permits access; it
+  is never used to override a site that has said no.* Two findings are pinned by
+  `tests/test_robots_check.py` (15 offline cases): the WAF usually blocks `robots.txt`
+  itself, so the policy is read as a browser when the honest request is refused and then
+  obeyed strictly; and `urllib.robotparser` cannot be used, because it ends a record at a
+  blank line and matches in file order, which reads a real-world policy as
+  "everything allowed".
+
+- **`/apply` now records the application in the tracker** - the flagship command wrote a CV
+  and a cover letter to disk and then wrote nothing to `job_search_tracker.csv`, so a drafted
+  and submitted application was invisible to `/gmail-sync`, `/html-report`, `/notion-sync`,
+  `/interview`, `/upskill` aggregate mode, and to `/rank`'s dedup exclusion - and the safety
+  net that would have caught it (`/gmail-sync`) refuses to create missing rows, so nothing
+  detected the loss. A new Step 6b appends a `drafted` row carrying the two document paths,
+  the fit rating and the posting URL, reusing `/outcome`'s exact header so the two commands
+  cannot diverge; re-running `/apply` updates that row rather than duplicating it, unless every
+  matching row holds a final status, in which case a second application to the same role gets
+  its own row. The same
+  step is mirrored into `job-application-assistant` because `/scrape` Step 5 routes straight
+  into the skill (`framework_version` 1.2.0 -> 1.3.0), and `/scrape` Step 6 now defers to it
+  instead of adding a row of its own. `seen_jobs.json` is deliberately left alone. **Forks:**
+  the bump means `check_upstream_updates.py` will flag the skill - reconcile the new Step 3b
+  (and Step 6b in `apply.md`) into your personalized copies rather than skipping the flag.
+
+  **`drafted` is introduced into the tracker status vocabulary**, and every reader that
+  meant *submitted* now says so. These readers define "open" by exclusion from the final
+  statuses, so a new non-final value would otherwise have joined all of them silently:
+  `/outcome`'s follow-up branch no longer drafts a chase email for an application that was
+  never sent, `/gmail-sync` no longer reports unsent drafts as stale, `/notion-sync` leaves
+  "Applied on" empty for them and says "not yet submitted" in the page body rather than
+  calling drafts submitted documents, and `/html-report` gains a sixth **Drafted** bucket
+  kept out of the funnel, the rejection rate and the headline count. `/outcome` Step 4
+  overwrites `date` with the submission date when a row leaves `drafted`, so the column
+  keeps meaning "applied on".
+
+  **`/gmail-sync` deliberately keeps searching for drafted rows.** `/apply` drafts but the
+  user submits, and forgetting to run `/outcome` afterwards is the failure this issue is
+  about. An employer reply arriving against a row still marked `drafted` is how that gets
+  caught, so those rows stay in the search set, the application acknowledgement is promoted
+  from noise to a `drafted` -> `applied` signal (it is the one email that proves a hand
+  submission, and it arrives within a day of it), and an approved match corrects the `date`
+  as well as the status. Only the staleness check skips them, since nothing was sent. (#269)
 
 ## [1.3.0] - 2026-08-03
 
