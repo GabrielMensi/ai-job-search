@@ -13,7 +13,19 @@ per-file diff commands.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-08-07
+
 ### Added
+
+- **`--jobage-minutes` on linkedin-search for sub-day freshness windows** (#302) - LinkedIn
+  filters its `f_TPR` parameter server-side at second granularity, so the CLI can now ask
+  for postings from the last N minutes instead of whole-day windows only. Conflicts with
+  `--jobage` are rejected explicitly (`CONFLICTING_AGE_FLAGS`). Useful for early-applicant
+  freshness on high-volume searches; URL construction only, no parsing change.
+
+- **README: video walkthrough link in Quick start** - The Next New Thing's hands-on
+  walkthrough of the workflow (recorded August 2026), for newcomers who want to see the
+  setup-to-application flow before reading. Docs only.
 
 - **`getonboard-search` rebuilt on GetOnBoard's real public REST API** - a
   community-index review of this fork found that `getonbrd.com` publishes a
@@ -67,6 +79,20 @@ per-file diff commands.
   `/setup --section search`); forks that already curated their portal set are unaffected.
 
 ### Fixed
+
+- **The linkedin-search CLI identifies honestly** - its `User-Agent` was a full Chrome
+  browser string, the last portal CLI still spoofing after #283 and the jobbank/jobdanmark
+  fix. It now sends `Mozilla/5.0 (compatible; linkedin-search-cli/1.0)`, the same token
+  format as every other portal. Verified live on both the search and detail endpoints:
+  identical 200 responses with full content under the honest token.
+
+- **A `.env` was committable** (`.gitignore`, `tools/security_guards.py`). `/add-portal`
+  can generate a skill for a portal that only returns usable content through a paid
+  fetching service, and such a skill reads an API token from the environment - but
+  nothing stopped the `.env` holding that token from being committed. No shipped portal
+  needs a credential, so upstream never hit this; a fork whose generated portals do hit
+  it immediately. `.env` and `.env.*` are now ignored and pinned in
+  `REQUIRED_IGNORE_RULES`, so the guard fails if the rule is ever dropped.
 
 - **The robots gate did not fail closed** (`tools/robots_check.py`, #277). Found by an
   adversarial review run over the merged file, not by inspection. Both cases are pinned
@@ -389,5 +415,9 @@ At this baseline the framework provides:
 - **Cross-runtime support** - a root `AGENTS.md` pointer so Codex and Antigravity can
   discover the portable portal skills, with Claude Code as the reference runtime.
 
-[Unreleased]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/MadsLorentzen/ai-job-search/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MadsLorentzen/ai-job-search/releases/tag/v1.0.0

@@ -69,6 +69,8 @@ The framework encodes career guidance best practices, including structured evalu
 
 ## Quick start
 
+> 🎥 **Prefer to see it in action first?** [The Next New Thing did a hands-on walkthrough](https://www.youtube.com/watch?v=HoVxjMNFYv4) of how the workflow is actually used, from setup to a finished application (recorded August 2026 - commands may have evolved since).
+
 ### 1. Fork and clone
 
 ```bash
