@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { parseJobCards, parseJobDetail, extractDivContent, minutesToTPR } from "../src/helpers";
+import { normalizeId } from "../src/commands/detail";
 
 // Minimal search-card markup: parseJobCards splits on the job-posting URN and
 // needs an id, a base-search-card__title, and a full-link. Everything else is
@@ -83,6 +84,51 @@ describe("decodeHtmlEntities (via parseJobCards)", () => {
   test("decodes hex entities in the company subtitle too", () => {
     const [card] = parseJobCards(searchCard("128", "Engineer", "N&#xF8;rrebro ApS"));
     expect(card.company).toBe("Nørrebro ApS");
+  });
+});
+
+describe("parseJobDetail active-status detection", () => {
+  // Captured from a real closed guest posting (2026-08-09): the banner LinkedIn
+  // actually renders inside the top card. Its class and its visible text are the
+  // only closed markers that occur in the wild.
+  const closedBanner = `
+    <figure class="closed-job closed-job__flavor topcard__flavor-row">
+      <span class="closed-job__icon closed-job__icon--error-pebble lazy-load"></span>
+      <figcaption class="closed-job__flavor--closed">No longer accepting applications</figcaption>
+    </figure>`;
+
+  const page = (topcardExtra: string, description: string) => `
+    <h1 class="topcard__title">Data Engineer</h1>
+    <span class="topcard__flavor topcard__flavor--bullet">Berlin</span>
+    ${topcardExtra}
+    <div class="show-more-less-html__markup">${description}</div>`;
+
+  test("a closed posting's top-card banner yields isActive: false", () => {
+    const job = parseJobDetail(page(closedBanner, "We build things."), "1");
+    expect(job.isActive).toBe(false);
+  });
+
+  test("an open posting yields isActive: true", () => {
+    const job = parseJobDetail(page("", "We are hiring!"), "2");
+    expect(job.isActive).toBe(true);
+  });
+
+  test("recruiter boilerplate in the description does not flag a live posting", () => {
+    // The review's false-positive case: the closed phrase appears in the
+    // *description text* of a job that is very much open.
+    const job = parseJobDetail(
+      page("", "Apply soon - once filled, this posting is no longer accepting applications."),
+      "3",
+    );
+    expect(job.isActive).toBe(true);
+  });
+
+  test("a closed-job class named in the description does not flag a live posting", () => {
+    const job = parseJobDetail(
+      page("", "Our design system documents a closed-job__flavor CSS class."),
+      "4",
+    );
+    expect(job.isActive).toBe(true);
   });
 });
 
@@ -177,3 +223,55 @@ describe("minutesToTPR", () => {
     expect(minutesToTPR(-5)).toBeNull();
   });
 });
+
+describe("normalizeId", () => {
+  test("extracts ID from raw numeric string", () => {
+    expect(normalizeId("1234567890")).toBe("1234567890");
+  });
+
+  test("extracts ID from URN", () => {
+    expect(normalizeId("urn:li:jobPosting:1234567890")).toBe("1234567890");
+  });
+
+  test("extracts ID from simple job view URL without trailing slash", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/1234567890")).toBe("1234567890");
+  });
+
+  test("extracts ID from simple job view URL with trailing slash", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/1234567890/")).toBe("1234567890");
+  });
+
+  test("extracts ID from simple job view URL with query parameter", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/1234567890?refId=abc")).toBe("1234567890");
+  });
+
+  test("extracts ID from simple job view URL with trailing slash and query parameter", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/1234567890/?refId=abc")).toBe("1234567890");
+  });
+
+  test("extracts ID from slug URL without trailing slash", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/software-engineer-1234567890")).toBe("1234567890");
+  });
+
+  test("extracts ID from slug URL with trailing slash", () => {
+    expect(normalizeId("https://www.linkedin.com/jobs/view/software-engineer-1234567890/")).toBe("1234567890");
+  });
+
+  test("extracts ID from slug URL with trailing slash and tracking query params", () => {
+    expect(
+      normalizeId("https://www.linkedin.com/jobs/view/software-engineer-at-company-1234567890/?trackingId=xyz&refId=123"),
+    ).toBe("1234567890");
+  });
+
+  test("extracts ID from regional subdomain LinkedIn URL with trailing slash", () => {
+    expect(normalizeId("https://dk.linkedin.com/jobs/view/data-scientist-9876543210/")).toBe("9876543210");
+  });
+
+  test("returns null for non-job URLs and invalid strings", () => {
+    expect(normalizeId("https://www.linkedin.com/feed/")).toBeNull();
+    expect(normalizeId("not-a-url")).toBeNull();
+    expect(normalizeId("12345")).toBeNull(); // fewer than 6 digits
+    expect(normalizeId("")).toBeNull();
+  });
+});
+

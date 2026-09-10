@@ -141,24 +141,35 @@ Copy-Item cover_letters\cover.cls, cover_letters\OpenFonts -Destination $SmokeDi
 Push-Location $SmokeDir; xelatex -interaction=nonstopmode -halt-on-error cover_smoke.tex; Pop-Location
 ```
 
-### Optional: pdftotext (for the ATS check)
+### Optional: ATS text extraction (pypdf, then pdftotext)
 
-`/apply` runs an ATS parseability check on the compiled CV: it extracts the PDF's text layer and verifies contact details, reading order, and keyword coverage the way an applicant-tracking system sees them. This uses `pdftotext` from [poppler](https://poppler.freedesktop.org/), which is not part of TeX distributions:
+`/apply` runs an ATS parseability check on the compiled CV: it extracts the PDF's text layer and verifies contact details, reading order, and keyword coverage the way an applicant-tracking system sees them.
+
+The default extractor is **pypdf** (BSD, `pip install pypdf`). Poppler `pdftotext` remains an optional fallback:
 
 - **macOS:** `brew install poppler`
 - **Debian/Ubuntu:** `sudo apt install poppler-utils`
 - **Windows:** `choco install poppler`
 
-If `pdftotext` is missing, `/apply` skips the mechanical check with a warning and falls back to a visual keyword review — everything else works normally.
+If a command still uses `pdftotext -layout`, it must pass `-enc UTF-8` as well. If **neither** extractor is available, `/apply` skips the mechanical check with a warning and falls back to a visual keyword review — everything else works normally.
 
 ## 2. Fork and clone
 
 ```bash
 gh repo fork MadsLorentzen/ai-job-search --clone
 cd ai-job-search
+gh repo set-default <your-github-username>/ai-job-search
 ```
 
 Or manually: fork on GitHub, then clone your fork.
+
+> **The `set-default` line is not optional.** `gh repo fork --clone` sets the
+> **upstream** repo as gh's default repository ("The `upstream` remote will be set as
+> the default remote repository" — `gh repo fork --help`), and gh uses the default for
+> **creating issues and PRs**. Without it, any later `gh issue create` run from this
+> clone — by you or by an agent you have asked to track your applications — silently
+> files on the upstream **public** tracker, publishing whatever the issue contains
+> under your GitHub identity, on a repo where you cannot delete it (#389).
 
 > **Before you go further: forks are public.** GitHub cannot make a fork of a public
 > repository private, and `/setup` (section 6) writes your personal data into **tracked**
