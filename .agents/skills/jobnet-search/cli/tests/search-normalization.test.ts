@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   buildSearchParams,
   createSearchOutput,
+  externalAdUrl,
   type SearchApiResponse,
   type SearchFlags,
 } from "../src/commands/search";
@@ -71,6 +72,7 @@ function apiResponse(): SearchApiResponse {
         applicationDeadlineStatus: "ExpirationDate",
         workHourPartTime: false,
         isExternal: true,
+        jobAdUrl: "https://example.com/jobs/job-2",
         hasLogo: true,
         logoUrl: "/logo/job-2",
         cvr: "12345678",
@@ -128,11 +130,12 @@ describe("Jobnet search normalization", () => {
     expect("description" in output.results[0]).toBe(false);
   });
 
-  test("additively emits the /scrape contract fields (company, location, date, deadline, url)", () => {
+  test("additively emits the /scrape contract fields (id, company, location, date, deadline, url)", () => {
     const output = createSearchOutput(apiResponse(), { ...flags, limit: undefined });
 
     expect(output.results).toHaveLength(2);
     expect(output.results[0]).toMatchObject({
+      id: "job-1",
       company: "Acme",
       location: null,
       date: "2026-07-01",
@@ -140,14 +143,51 @@ describe("Jobnet search normalization", () => {
       url: "https://jobnet.dk/find-job/job-1",
     });
     expect(output.results[1]).toMatchObject({
+      id: "job-2",
       company: "Example Co",
       location: "København Ø",
       date: "2026-07-02",
       deadline: "2026-08-01",
       url: "https://jobnet.dk/find-job/job-2",
+      applyUrl: "https://example.com/jobs/job-2",
+      jobAdUrl: "https://example.com/jobs/job-2",
     });
     expect(output.results[0].hiringOrgName).toBe("Acme");
     expect(output.results[1].applicationDeadline).toBe("2026-08-01T23:59:00+02:00");
+    // `id` is the contract name for the value `detail <jobAdId>` consumes.
+    expect(output.results[0].id).toBe(output.results[0].jobAdId);
+  });
+
+  test("external ads keep canonical find-job url and provide destination as applyUrl and jobAdUrl", () => {
+    const response = apiResponse();
+    // External ad with valid http(s) jobAdUrl emits canonical url and destination applyUrl/jobAdUrl
+    response.jobAds[1].isExternal = true;
+    response.jobAds[1].jobAdUrl = "https://employer.example/apply";
+    const withUrl = createSearchOutput(response, { ...flags, limit: undefined });
+    expect(withUrl.results[1].url).toBe("https://jobnet.dk/find-job/job-2");
+    expect(withUrl.results[1].applyUrl).toBe("https://employer.example/apply");
+    expect(withUrl.results[1].jobAdUrl).toBe("https://employer.example/apply");
+    expect(withUrl.results[1].isExternal).toBe(true);
+
+    // External ad without jobAdUrl keeps canonical find-job url and null applyUrl/jobAdUrl
+    response.jobAds[1].jobAdUrl = null;
+    const withoutUrl = createSearchOutput(response, { ...flags, limit: undefined });
+    expect(withoutUrl.results[1].url).toBe("https://jobnet.dk/find-job/job-2");
+    expect(withoutUrl.results[1].applyUrl).toBeNull();
+    expect(withoutUrl.results[1].jobAdUrl).toBeNull();
+    expect(withoutUrl.results[1].isExternal).toBe(true);
+
+    // External ad with non-http(s) scheme keeps canonical find-job url and null applyUrl/jobAdUrl
+    response.jobAds[1].jobAdUrl = "javascript:alert(1)";
+    const invalidUrl = createSearchOutput(response, { ...flags, limit: undefined });
+    expect(invalidUrl.results[1].url).toBe("https://jobnet.dk/find-job/job-2");
+    expect(invalidUrl.results[1].applyUrl).toBeNull();
+    expect(invalidUrl.results[1].jobAdUrl).toBeNull();
+
+    // Internal ad always keeps find-job link and null applyUrl
+    expect(withoutUrl.results[0].url).toBe("https://jobnet.dk/find-job/job-1");
+    expect(withoutUrl.results[0].applyUrl).toBeNull();
+    expect(withoutUrl.results[0].isExternal).toBe(false);
   });
 
   test("maps Jobnet's undisclosed-deadline sentinel (1900-01-01) to null", () => {
@@ -179,5 +219,21 @@ describe("Jobnet null publicationDate degradation", () => {
 
     expect(output.results[0].date).toBeNull();
     expect(output.results[1].date).toBe("2026-07-02");
+  });
+});
+
+describe("externalAdUrl helper", () => {
+  test("returns valid https or http URL when isExternal is true", () => {
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "https://example.com/apply" })).toBe("https://example.com/apply");
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "http://example.com/apply" })).toBe("http://example.com/apply");
+  });
+
+  test("returns null if not external, missing, or non-http(s) scheme", () => {
+    expect(externalAdUrl({ isExternal: false, jobAdUrl: "https://example.com/apply" })).toBeNull();
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: null })).toBeNull();
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "   " })).toBeNull();
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "javascript:void(0)" })).toBeNull();
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "file:///etc/passwd" })).toBeNull();
+    expect(externalAdUrl({ isExternal: true, jobAdUrl: "not-a-valid-url" })).toBeNull();
   });
 });

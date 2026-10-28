@@ -1,6 +1,10 @@
 """Tests for salary_lookup.py — format_entry, match_score, and search_company."""
 
 import io
+import json
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -25,6 +29,39 @@ from salary_lookup import (
 # ---------------------------------------------------------------------------
 
 class FormatEntryTests(unittest.TestCase):
+    PRIVACY_FOOTNOTE = "* N/A = Too few employees to publish (privacy)"
+
+    def test_privacy_footnote_is_omitted_when_no_row_is_suppressed(self):
+        # The footnote explains the N/A* marker. Printed under a table where
+        # every row has an index, it asserts a privacy suppression that never
+        # happened (residual noted on #470).
+        entry = {
+            "company": "Example Corp",
+            "city": "",
+            "categories": {"all_employees": {"count": 500, "index": 108.5}},
+        }
+
+        rendered = format_entry(entry, {"index_baseline": 100, "index_label": "Index"})
+
+        self.assertNotIn("N/A", rendered)
+        self.assertNotIn(self.PRIVACY_FOOTNOTE, rendered)
+        self.assertRegex(rendered, r"All Employees\s+500\s+108\.5\s+\+8\.5%")
+
+    def test_privacy_footnote_is_printed_when_a_row_is_suppressed(self):
+        entry = {
+            "company": "Example Corp",
+            "city": "",
+            "categories": {
+                "all_employees": {"count": 500, "index": 108.5},
+                "small_team": {"count": 3, "index": None},
+            },
+        }
+
+        rendered = format_entry(entry, {"index_baseline": 100, "index_label": "Index"})
+
+        self.assertRegex(rendered, r"Small Team\s+3\s+N/A\*")
+        self.assertIn(self.PRIVACY_FOOTNOTE, rendered)
+
     def test_zero_count_is_displayed_as_zero(self):
         entry = {
             "company": "Example Corp",
@@ -565,6 +602,51 @@ class TestSearchCompanyScoreThreshold(unittest.TestCase):
         )
         results = search_company(data, "Novo Nordisk")
         self.assertEqual(results[0]["company"], "Novo Nordisk")
+
+
+class TestSalaryFileEncoding(unittest.TestCase):
+    """Exercise user-created UTF-8 files through the documented CLI."""
+
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        self.script = self.root / "salary_lookup.py"
+        shutil.copyfile(salary_lookup.__file__, self.script)
+        self.data_file = self.root / "salary_data.json"
+        self.entry = {
+            "company": "Novo Nordisk A/S",
+            "city": "Bagsværd",
+            "categories": {"engineering": {"count": 120, "index": 112.3}},
+        }
+
+    def run_cli(self, *args):
+        return subprocess.run(
+            [sys.executable, str(self.script), *args],
+            cwd=self.root, capture_output=True, text=True, encoding="utf-8",
+            timeout=30,
+        )
+
+    def test_utf8_with_and_without_bom(self):
+        payload = {"metadata": {"index_baseline": 100}, "companies": [self.entry]}
+        for encoding in ("utf-8", "utf-8-sig"):
+            with self.subTest(encoding=encoding):
+                self.data_file.write_text(
+                    json.dumps(payload, ensure_ascii=False), encoding=encoding,
+                )
+                validated = self.run_cli("--validate")
+                self.assertEqual(validated.returncode, 0, validated.stderr)
+                self.assertIn("OK - no issues found.", validated.stdout)
+                lookup = self.run_cli("Novo Nordisk", "--json")
+                self.assertEqual(lookup.returncode, 0, lookup.stderr)
+                self.assertEqual(json.loads(lookup.stdout), [self.entry])
+
+    def test_bom_does_not_hide_invalid_json(self):
+        self.data_file.write_text('{"companies": [}', encoding="utf-8-sig")
+        result = self.run_cli("--validate")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("invalid JSON at line 1, column 16", result.stderr)
+        self.assertNotIn("Unexpected UTF-8 BOM", result.stderr)
 
 
 if __name__ == "__main__":

@@ -18,12 +18,17 @@ Two signals drive the sort:
 
 1. Already applied? A cherry-pick lands with a NEW sha but the same patch, so a
    raw sha comparison misreports it as missing. We compute git patch-ids for the
-   fork-only commits and treat any upstream commit whose patch-id (or exact
-   subject) matches as already applied.
+   fork-only commits and treat any upstream commit whose patch-id
+   matches as already applied. A matching subject with a different patch may be a
+   conflict-resolved port or an unrelated change: keep it as a distinct verify
+   reason in the advisory skip list, never as proof of a cherry-pick.
 
 2. Relevant to this fork? A commit that only touches files this fork deleted
    (e.g. removed demo portals) is almost certainly N/A. We check each commit's
-   touched paths against the working tree and flag accordingly.
+   touched paths against HEAD and the shared base: a genuinely new upstream
+   path is worth reviewing, rather than a file the fork chose to remove. A new
+   file inside a directory the fork removed (a test added to a dropped portal)
+   counts as removed too.
 
 Usage: python tools/upstream_triage.py [--remote upstream] [--branch master]
 Exits 0 always (a report, not a gate). Prints a note to stderr and exits 0 if
@@ -32,28 +37,42 @@ the upstream ref is unavailable, so a scheduled job degrades gracefully.
 from __future__ import annotations
 
 import argparse
+import shlex
 import subprocess
 import sys
 
 
+def _force_utf8_output() -> None:
+    """Write UTF-8 whatever the host's default encoding is.
+
+    A piped stdout on Windows defaults to the ANSI code page (cp1252 on most
+    Western installs), so printing a commit subject or author outside it
+    raised UnicodeEncodeError before the report could be emitted.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            reconfigure(encoding="utf-8")
+
+
 def git(*args: str) -> str:
     return subprocess.run(
-        ["git", *args], capture_output=True, text=True, check=True
+        ["git", *args], capture_output=True, text=True, encoding="utf-8", errors="replace", check=True
     ).stdout
 
 
 def rev_list(range_spec: str) -> list[str]:
-    out = git("rev-list", "--no-merges", range_spec).strip()
+    out = git("rev-list", "--no-merges", "--topo-order", range_spec).strip()
     return out.splitlines() if out else []
 
 
 def patch_id(sha: str) -> str | None:
     """Stable patch-id for a commit, or None if it has no diff."""
     show = subprocess.run(
-        ["git", "show", sha], capture_output=True, text=True, check=True
+        ["git", "show", sha], capture_output=True, text=True, encoding="utf-8", errors="replace", check=True
     ).stdout
     r = subprocess.run(
-        ["git", "patch-id", "--stable"], input=show, capture_output=True, text=True
+        ["git", "patch-id", "--stable"], input=show, capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     line = r.stdout.strip()
     return line.split()[0] if line else None
@@ -68,12 +87,30 @@ def files_touched(sha: str) -> list[str]:
     return [f for f in out.splitlines() if f]
 
 
-def path_exists(path: str) -> bool:
-    # ls-tree against HEAD is authoritative for "does this fork still ship it".
+def path_exists(path: str, ref: str = "HEAD") -> bool:
+    # Read committed trees, rather than uncommitted files in the working tree.
     r = subprocess.run(
-        ["git", "cat-file", "-e", f"HEAD:{path}"], capture_output=True
+        ["git", "cat-file", "-e", f"{ref}:{path}"], capture_output=True
     )
     return r.returncode == 0
+
+
+def in_removed_dir(path: str, base: str) -> bool:
+    """Whether a path absent from HEAD and base sits in a directory the fork removed.
+
+    The nearest ancestor directory decides: one HEAD still has means the path is
+    new in a directory the fork kept; one only the base has means the fork
+    deleted the tree the path would land in. Directories in neither are new
+    upstream too, so the walk goes on up to the root.
+    """
+    parts = path.split("/")[:-1]
+    for depth in range(len(parts), 0, -1):
+        parent = "/".join(parts[:depth])
+        if path_exists(parent):
+            return False
+        if path_exists(parent, base):
+            return True
+    return False
 
 
 def remote_slug(remote: str) -> str | None:
@@ -111,6 +148,7 @@ def commit_cell(short: str, sha: str, slug: str | None) -> str:
 
 
 def main() -> int:
+    _force_utf8_output()
     ap = argparse.ArgumentParser()
     ap.add_argument("--remote", default="upstream")
     ap.add_argument("--branch", default="master")
@@ -134,12 +172,19 @@ def main() -> int:
     behind = rev_list(f"HEAD..{ref}")
     if not behind:
         print(f"Up to date with `{ref}`. Nothing to review. :white_check_mark:")
-        _print_crossref(ref)
+        _print_crossref(args.remote, args.branch)
         return 0
 
     fork_only = rev_list(f"{ref}..HEAD")
     fork_patch_ids = {p for p in (patch_id(s) for s in fork_only) if p}
-    fork_subjects = {subject(s) for s in fork_only}
+    fork_subjects = {}
+    for fork_sha in fork_only:
+        fork_subjects.setdefault(subject(fork_sha), fork_sha)
+    try:
+        common_base = git("merge-base", "HEAD", ref).strip()
+    except subprocess.CalledProcessError:
+        # Without shared history, absence cannot establish a deliberate deletion.
+        common_base = None
 
     review: list[tuple[str, str, str, list[str]]] = []
     skip: list[tuple[str, str, str, str]] = []
@@ -147,21 +192,31 @@ def main() -> int:
     for sha in behind:
         subj = subject(sha)
         short = sha[:9]
-        if patch_id(sha) in fork_patch_ids or subj in fork_subjects:
+        if patch_id(sha) in fork_patch_ids:
             skip.append((short, sha, subj, "already applied (cherry-picked)"))
+            continue
+        if subj in fork_subjects:
+            match = fork_subjects[subj][:9]
+            skip.append((short, sha, subj,
+                         f"subject matches fork commit {match}, patch differs: verify"))
             continue
         if any(sha.startswith(e) for e in wontport):
             skip.append((short, sha, subj, "on the fork's won't-port list"))
             continue
         touched = files_touched(sha)
-        present = [f for f in touched if path_exists(f)]
+        relevant = [
+            f for f in touched
+            if path_exists(f)
+            or common_base is None
+            or not (path_exists(f, common_base) or in_removed_dir(f, common_base))
+        ]
         # A commit whose only surviving footprint is the changelog is one whose
         # real change lives in files this fork removed - the code doesn't apply,
         # only a doc line would. Low signal; demote it.
-        substantive = [f for f in present if f != "CHANGELOG.md"]
-        if touched and not present:
+        substantive = [f for f in relevant if f != "CHANGELOG.md"]
+        if touched and not relevant:
             skip.append((short, sha, subj, "touches only files not in this fork"))
-        elif present and not substantive:
+        elif relevant and not substantive:
             skip.append((short, sha, subj, "changelog-only footprint in this fork"))
         else:
             review.append((short, sha, subj, substantive))
@@ -176,7 +231,7 @@ def main() -> int:
     lines.append("### Worth reviewing")
     if review:
         lines.append("")
-        lines.append("| Commit | Subject | Fork files it touches |")
+        lines.append("| Commit | Subject | Relevant files it touches |")
         lines.append("|---|---|---|")
         for short, sha, subj, present in review:
             shown = ", ".join(f"`{p}`" for p in present[:4]) or "_(new/shared paths)_"
@@ -189,7 +244,8 @@ def main() -> int:
         lines.append("<details><summary>Ready-to-run cherry-picks (review each before running)</summary>")
         lines.append("")
         lines.append("```bash")
-        for short, sha, subj, _ in review:
+        # Report rows stay newest first; commands must apply ancestors first.
+        for short, sha, subj, _ in reversed(review):
             lines.append(f"git cherry-pick {sha}  # {subj}")
         lines.append("```")
         lines.append("")
@@ -211,15 +267,15 @@ def main() -> int:
         lines.append("_None._")
 
     print("\n".join(lines))
-    _print_crossref(ref)
+    _print_crossref(args.remote, args.branch)
     return 0
 
 
-def _print_crossref(ref: str) -> None:
+def _print_crossref(remote: str, branch: str) -> None:
     print()
     print(
         "_For personalized-file version stamps (which methodology files changed), "
-        f"run `python tools/check_upstream_updates.py --remote {ref.split('/')[0]}`._"
+        f"run `python tools/check_upstream_updates.py --remote {shlex.quote(remote)} --branch {shlex.quote(branch)}`._"
     )
 
 

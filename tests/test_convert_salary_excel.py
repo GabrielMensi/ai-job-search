@@ -1,11 +1,23 @@
 import io
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 from types import SimpleNamespace
 
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
+
+from salary_lookup import format_entry
 from tools.convert_salary_excel import (
     INDEX_PATTERNS,
     detect_column_type,
+    COMPANY_PATTERNS,
     header_matches,
     parse_numeric_cell,
     parse_sheet,
@@ -28,6 +40,51 @@ class FakeWorksheet:
 
     def __getitem__(self, row_number):
         return [SimpleNamespace(value=value) for value in self.rows[row_number - 1]]
+
+
+@unittest.skipUnless(openpyxl is not None, "openpyxl is not installed")
+class BooleanCellCliTests(unittest.TestCase):
+    def test_excel_logical_cells_are_not_salary_numbers(self):
+        # Exercise the documented converter CLI with actual Excel boolean cells,
+        # including partial pairs and numeric 0/1 controls.
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "salary.xlsx"
+            target = Path(tmp) / "salary.json"
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+            sheet.append(["Company", "City", "Count", "Index", "Verified"])
+            sheet.append(["Logical Pair", "Berlin", True, False, True])
+            sheet.append(["Logical Count", "Berlin", False, 108.5, False])
+            sheet.append(["Logical Index", "Berlin", 12, True, None])
+            sheet.append(["Numeric Values", "Berlin", 0, 1, 0])
+            sheet.append(["Numeric Count", "Berlin", 1, 0, 1])
+            workbook.save(source)
+            workbook.close()
+
+            result = subprocess.run(
+                [sys.executable, str(Path(__file__).resolve().parents[1] /
+                                     "tools/convert_salary_excel.py"),
+                 str(source), "--output", str(target)],
+                capture_output=True, text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            companies = json.loads(target.read_text(encoding="utf-8"))["companies"]
+
+        self.assertEqual(companies[0]["categories"], {})
+        self.assertEqual(companies[1]["categories"], {
+            "all_employees": {"count": None, "index": 108.5},
+        })
+        self.assertEqual(companies[2]["categories"], {
+            "all_employees": {"count": 12, "index": None},
+        })
+        self.assertEqual(companies[3]["categories"], {
+            "all_employees": {"count": 0, "index": 1.0},
+            "verified": {"index": 0.0},
+        })
+        self.assertEqual(companies[4]["categories"], {
+            "all_employees": {"count": 1, "index": 0.0},
+            "verified": {"index": 1.0},
+        })
 
 
 class DetectColumnTypeTests(unittest.TestCase):
@@ -106,6 +163,22 @@ class DetectColumnTypeTests(unittest.TestCase):
                 self.assertEqual(
                     companies[0]["categories"]["salary"], {"index": 105.5}
                 )
+
+    def test_parse_sheet_detects_danish_compound_company_header(self):
+        # The IDA workbook heads its company column "Firmanavn og by": "firma"
+        # glued to "navn". Whole-token matching alone skipped the entire sheet
+        # ("Could not find header row") from #75 until "firma" joined
+        # COMPOUND_PATTERNS, so the shipped demonstration data no longer
+        # converted at all.
+        self.assertTrue(header_matches("Firmanavn og by", COMPANY_PATTERNS))
+        ws = FakeWorksheet([
+            ("Firmanavn og by", "Antal", "Indeks"),
+            ("Example A/S, Aarhus", 12, 105.0),
+        ])
+        companies = parse_sheet(ws)
+        self.assertEqual(len(companies), 1)
+        self.assertEqual(companies[0]["company"], "Example A/S, Aarhus")
+        self.assertEqual(companies[0]["categories"]["all_employees"], {"count": 12, "index": 105.0})
 
     def test_parse_sheet_detects_city_column_with_token_header(self):
         # City headers are matched with the same token-based header_matches()
@@ -389,6 +462,159 @@ class ParseNumericCellLocaleTests(unittest.TestCase):
 
     def test_european_multiple_thousands_groups(self):
         self.assertEqual(parse_numeric_cell("1.234.567,89"), 1234567.89)
+
+
+class BareCountIndexPairingTests(unittest.TestCase):
+    """A count/index pair whose headers carry no category word is still a pair.
+
+    "Count" + "Index" (Danish "Antal" + "Lønindeks") both strip to an empty
+    category name, and the pairing loop used to require a non-empty name on
+    both sides, so the single-category layout the README describes as
+    "auto-pairs count/index columns" came out as two unrelated standalone
+    columns. salary_lookup then rendered the count row with "N/A*" for the
+    index - "too few employees to publish (privacy)" - about a company whose
+    headcount was right there in the file. The literal name is asserted (not
+    the module constant) so the cases run, and fail, against the old converter.
+    """
+
+    DEFAULT_CATEGORY = "all_employees"
+
+    def test_bare_english_pair_is_paired_under_the_default_category(self):
+        ws = FakeWorksheet([
+            ("Company", "City", "Count", "Index"),
+            ("Acme Corp", "Copenhagen", 500, 108.5),
+        ])
+
+        companies = parse_sheet(ws)
+
+        self.assertEqual(
+            companies[0]["categories"],
+            {self.DEFAULT_CATEGORY: {"count": 500, "index": 108.5}},
+        )
+
+    def test_bare_danish_pair_is_paired_under_the_default_category(self):
+        ws = FakeWorksheet([
+            ("Firma", "By", "Antal", "Lønindeks"),
+            ("Acme Corp", "Aarhus", 500, 108.5),
+        ])
+
+        companies = parse_sheet(ws)
+
+        self.assertEqual(
+            companies[0]["categories"],
+            {self.DEFAULT_CATEGORY: {"count": 500, "index": 108.5}},
+        )
+
+    def test_bare_pair_does_not_cross_pair_with_a_named_category(self):
+        # The bare pair and the named pair coexist; neither steals the other's
+        # column, and a lone "Antal" with no bare index column stays standalone
+        # (pinned separately by test_standalone_count_column_is_stored_as_count_not_index).
+        ws = FakeWorksheet([
+            ("Company", "Antal", "IT Count", "IT Index", "Lønindeks"),
+            ("Acme Corp", 500, 30, 112.0, 108.5),
+        ])
+
+        companies = parse_sheet(ws)
+
+        self.assertEqual(
+            companies[0]["categories"],
+            {
+                self.DEFAULT_CATEGORY: {"count": 500, "index": 108.5},
+                "it": {"count": 30, "index": 112.0},
+            },
+        )
+
+    def test_lookup_renders_the_bare_pair_as_one_row_without_the_privacy_footnote_firing(self):
+        # End to end through the documented path: converter output is what
+        # salary_lookup.format_entry displays during /apply. Before the fix the
+        # same sheet produced a "Count  500  N/A*" row plus an "Index  -  108.5"
+        # row - the N/A* asserting a privacy suppression that never happened.
+        ws = FakeWorksheet([
+            ("Company", "City", "Count", "Index"),
+            ("Acme Corp", "Copenhagen", 500, 108.5),
+        ])
+        entry = parse_sheet(ws)[0]
+
+        rendered = format_entry(entry, {"index_baseline": 100, "index_label": "Index"})
+
+        self.assertNotIn("N/A*", rendered.split("* N/A =")[0])
+        self.assertRegex(rendered, r"All Employees\s+500\s+108\.5\s+\+8\.5%")
+        self.assertNotRegex(rendered, r"^\s*Count\s+500", )
+
+
+class QualifiedCompanyHeaderNextToQualifiedSalaryHeader(unittest.TestCase):
+    """A name header must win over a salary header that also carries the word.
+
+    The detection loop kept the LAST header matching a company pattern, so
+    "Company Name | City | Company Count | Company Index" made the index
+    column the company column and every row's company read "108.5". #571
+    added an exact-match preference, which only helps when a header is
+    exactly "Company"; the qualified name header stayed exposed. The Danish
+    case below is a constructed header in the same shape, not the IDA
+    workbook, whose pairs are headed "Antal" and "Indeks" and already convert.
+    """
+
+    def test_company_name_wins_over_company_index(self):
+        ws = FakeWorksheet([
+            ("Company Name", "City", "Company Count", "Company Index"),
+            ("Acme Corp", "Berlin", 25, 108.5),
+        ])
+
+        entry = parse_sheet(ws)[0]
+
+        self.assertEqual(entry["company"], "Acme Corp")
+        self.assertEqual(entry["city"], "Berlin")
+        self.assertEqual(entry["categories"], {"company": {"count": 25, "index": 108.5}})
+
+    def test_danish_name_header_wins_over_qualified_index_header(self):
+        # The cell carries no comma so the case tests which column wins and
+        # does not depend on how a combined name-and-city cell is split (#660).
+        ws = FakeWorksheet([
+            ("Firmanavn og by", "Antal", "Firmaets indeks"),
+            ("Acme A/S", 25, 108.5),
+        ])
+
+        entry = parse_sheet(ws)[0]
+
+        self.assertEqual(entry["company"], "Acme A/S")
+        self.assertEqual(sum(1 for c in entry["categories"].values() if c.get("index") == 108.5), 1)
+        self.assertEqual(sum(1 for c in entry["categories"].values() if c.get("count") == 25), 1)
+
+    def test_exact_header_still_wins_over_a_qualified_name_header(self):
+        # Tier 1 (#571) is unchanged: "Company" beats "Company Name" wherever it sits.
+        ws = FakeWorksheet([
+            ("Company Name", "Company", "Salary Index"),
+            ("Acme Corp (legal)", "Acme", 108.5),
+        ])
+
+        self.assertEqual(parse_sheet(ws)[0]["company"], "Acme")
+
+    def test_city_column_never_aliases_the_company_column(self):
+        # "Firmanavn og by" carries both a company and a city pattern word.
+        ws = FakeWorksheet([
+            ("Firmanavn og by", "Antal", "Indeks"),
+            ("Acme A/S", 25, 108.5),
+        ])
+
+        entry = parse_sheet(ws)[0]
+
+        self.assertEqual(entry["company"], "Acme A/S")
+        self.assertEqual(entry["city"], "")
+        self.assertEqual(entry["categories"], {"all_employees": {"count": 25, "index": 108.5}})
+
+    def test_combined_header_before_a_real_city_column_keeps_the_city(self):
+        # The city lookup must skip the company column: with the combined
+        # header first, the first city-pattern match used to land on it and
+        # was then cleared, dropping a real city column that followed.
+        for headers, row, city in (
+            (("Company and city", "City name", "Count", "Index"), ("Acme Corp", "Berlin", 25, 108.5), "Berlin"),
+            (("Firmanavn og by", "City name", "Antal", "Indeks"), ("Acme A/S", "Aarhus", 25, 108.5), "Aarhus"),
+        ):
+            with self.subTest(headers=headers):
+                entry = parse_sheet(FakeWorksheet([headers, row]))[0]
+                self.assertEqual(entry["company"], row[0])
+                self.assertEqual(entry["city"], city)
+                self.assertEqual(entry["categories"], {"all_employees": {"count": 25, "index": 108.5}})
 
 
 class CompoundCategoryPairingTests(unittest.TestCase):

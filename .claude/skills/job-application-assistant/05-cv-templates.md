@@ -1,5 +1,5 @@
 ---
-framework_version: 1.4.3
+framework_version: 1.4.8
 ---
 
 # CV Templates and Tailoring Guide
@@ -42,6 +42,13 @@ Expected output: `Output written on main_<company>_<role>.pdf (2 pages, ...)`. A
 \renewcommand*{\sectionstyle}[1]{{\sectionfont\color{color1}#1}}
 
 \usepackage[utf8]{inputenc}
+% pdflatex fallback only (the documented engine is lualatex, which skips this
+% branch). Without T1 font encoding pdflatex builds accented letters with
+% \accent, and the PDF text layer stores them decomposed - `e` + U+0300 rather
+% than U+00E8 - so an ATS keyword match on "Genève" fails while the page looks
+% right. moderncv 2.5 loads T1 itself under pdflatex; 2.3.1 (Debian/Ubuntu apt)
+% does not. \ifpdftex comes from iftex, which every moderncv version loads.
+\ifpdftex\usepackage[T1]{fontenc}\fi
 % moderncv loads hyperref itself in an \AtEndPreamble hook, so \hypersetup
 % must go in an \AtEndPreamble of our own: on moderncv < 2.4 a top-level
 % \usepackage{hyperref} clashes with the class's own
@@ -58,7 +65,7 @@ Expected output: `Output written on main_<company>_<role>.pdf (2 pages, ...)`. A
     % value here would win and open every CV in fullscreen presentation mode.
     pdfpagemode=UseNone,
 }}
-\usepackage[scale=0.77]{geometry}
+\usepackage[scale=0.80]{geometry}
 \usepackage{import}
 
 % Personal data
@@ -157,12 +164,12 @@ Use the posting's own core term in the matching bullet's bold label when it trut
 State completion inside the entry itself:
 
 ```latex
-\item{\cventry{2025--2026}{[Degree], [Field]}{[Institution]}{[Location]}{}{\vspace{1pt}
+\item{\cventry{2025-2026}{[Degree], [Field]}{[Institution]}{[Location]}{}{\vspace{1pt}
 In progress, expected [Month Year]. [Relevant topics]
 }}
 ```
 
-Any consistent form works: `In progress, expected <Month Year>.` / `Expected completion <Month Year>.` / a date field of `2025–present`.
+Any consistent form works: `In progress, expected <Month Year>.` / `Expected completion <Month Year>.` / a date field of `2025-present`.
 
 Claiming a credential not yet held is a factual misstatement, and it is the kind discovered at transcript or reference check rather than at interview. It costs nothing to prevent. The same applies to in-progress certifications and courses.
 
@@ -247,7 +254,7 @@ After writing the CV and before presenting to the user, always compile and visua
 Add `\needspace{5\baselineskip}` immediately before the problematic `\cventry`:
 ```latex
 \needspace{5\baselineskip}
-\item{\cventry{YEAR--YEAR}{Role Title}{Organization}{Location}{}{...}}
+\item{\cventry{YEAR-YEAR}{Role Title}{Organization}{Location}{}{...}}
 ```
 Include `\usepackage{needspace}` in the preamble.
 
@@ -266,8 +273,10 @@ Restore the highest-relevance item that was previously cut — a CV that ends mi
 
 Most employers run CVs through an ATS before a human sees them, and the ATS reads the PDF's embedded **text layer**, not the rendered page. A CV can pass visual inspection and still extract as garbage. After the layout passes the compile-and-inspect loop, verify the text layer:
 
+> **Windows:** run these tools as `python`, not `python3`. A python.org install ships no `python3`, so that name reaches the Microsoft Store alias, which either exits 49 with no output (#669) or starts a separate Store Python without the packages `pip` installed (such as pypdf). `.claude/settings.json` allows both spellings.
+
 ```bash
-python tools/verify_pdf.py cv/main_<company>_<role>.pdf --dump-text cv/main_<company>_<role>.txt
+python3 tools/verify_pdf.py cv/main_<company>_<role>.pdf --dump-text cv/main_<company>_<role>.txt
 ```
 
 Extraction tries **pypdf** first (`pip install pypdf`, BSD license), then Poppler `pdftotext`. If a fallback still uses `pdftotext -layout`, it must also pass `-enc UTF-8`: Xpdf-based builds default to Latin-1, which makes every non-ASCII character in a perfectly good CV read back as a replacement character. If neither extractor is available, skip the mechanical check with a warning and rely on the visual PDF read for keyword coverage.
@@ -277,7 +286,8 @@ What to check in the extraction:
 - **Contact details as literal text.** The stock template's fontawesome contact icons extract as glyph names (`MOBILE-ALT`, `Envelope`) - harmless noise, because the actual address and number are printed beside them. The failure mode is a contact detail carried *only* by an icon or a hyperlink (like the `LinkedIn` link text, whose URL is not in the text layer): invisible to an ATS. The email address must always appear as printed text.
 - **No garbled output.** `(cid:NNN)` markers or `�` characters mean a font is embedded without a Unicode mapping - an ATS sees the same garbage. This shows up with unusual fonts in custom templates, not with the stock moderncv setup under lualatex.
 - **Reading order.** The stock banking style is single-column, so extraction order matches visual order. Custom templates (via `/add-template`) with sidebars or multi-column layouts can interleave unrelated lines; if extraction order is scrambled, the user is trading ATS compatibility for looks and should be told.
-- **Keyword coverage.** Match the posting's required/preferred terms against the extracted text, in the posting's language. Prefer the posting's exact term over a synonym when it is truthfully applicable - ATS matching is often literal. Never add a keyword the profile does not support.
+- **Keyword coverage.** Match the posting's required/preferred terms against the extracted text, in the posting's language. Prefer the posting's exact term over a synonym when it is truthfully applicable - ATS matching is often literal. Never add a keyword the profile does not support. `verify_pdf.py --contains` folds both sides for whitespace, Unicode normalization (NFC) and LaTeX's typographic substitutions before comparing - `'` reaches the text layer as U+2019 and `--` as U+2013, so `--contains "Master's degree"` and `--contains "2016-2024"` match what the template actually renders. The dumped `.txt` is never folded: it is the raw layer the ATS sees, which is why the date-range check below reads the dump, not `--contains`.
+- **Accents intact (pdflatex fallback).** Under pdflatex without T1 font encoding the text layer stores accented letters decomposed (`e` + combining grave instead of `è`); pypdf reads that as `Gen` `eve` with a stray spacing accent, and neither form matches a typed keyword. The stock template guards this with `\ifpdftex\usepackage[T1]{fontenc}\fi`; keep the line in tailored CVs and custom templates that may be compiled with pdflatex. It is a no-op under lualatex.
 
 ### Date fields must be ASCII ranges (confirmed ATS import failure)
 
@@ -302,7 +312,7 @@ Two independent causes, both easy to avoid:
 
    Where a genuine range exists, use it even when a single year would be factually accurate - a degree written `1995` is true but imports worse than `1992-1995`. Do not invent a start date you do not have; a lone graduation year is fine, just expect it to be typed in by hand.
 
-**Add this to the step 5d checks**: after extracting the text layer, confirm every experience entry shows a start *and* an end separated by an ASCII hyphen. Because the failure is silent and invisible in the PDF, the candidate otherwise discovers it only while filling in the application form.
+**Cause 1 is mechanical in step 5d**: `python3 tools/verify_pdf.py cv/main_<company>_<role>.pdf --ascii-dates` scans the raw text layer for a year joined to a Unicode dash and exits 1 naming each hit with its code point (`U+2013 in 'Role Title 2016–2024'`). It deliberately reads the raw layer: the fold that lets `--contains "2016-2024"` match what the template renders maps that same en-dash back to `-`, so `--contains` can never see this. A year on either side of the dash is enough, so `Mar 2016 – Jul 2016` and `2016 – Present` are caught too; a numeric range with no year (`EUR 600k–1M`) is left alone. **Cause 2 stays a read-through check**: after extracting the text layer, confirm every experience entry shows a start *and* an end. Because both failures are silent and invisible in the PDF, the candidate otherwise discovers them only while filling in the application form.
 
 ## Page Budget - Hard 2-Page Limit
 

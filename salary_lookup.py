@@ -18,6 +18,7 @@ Usage:
 """
 
 import json
+import math
 import sys
 import re
 import argparse
@@ -69,6 +70,16 @@ def collect_validation_issues(data):
     metadata = data.get("metadata", {})
     if metadata is not None and not isinstance(metadata, dict):
         errors.append("'metadata' must be an object when provided")
+    elif isinstance(metadata, dict):
+        baseline = metadata.get("index_baseline", 100)
+        try:
+            finite_baseline = math.isfinite(baseline)
+        except (TypeError, OverflowError):
+            finite_baseline = False
+        if isinstance(baseline, bool) or not finite_baseline:
+            errors.append("'metadata.index_baseline' must be a finite number")
+        if not isinstance(metadata.get("index_label", "Index"), str):
+            errors.append("'metadata.index_label' must be a string")
 
     companies = data.get("companies")
     if not isinstance(companies, list):
@@ -149,7 +160,7 @@ def read_raw_data():
         print("step will be skipped during /apply.", file=sys.stderr)
         sys.exit(1)
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
+        with open(DATA_FILE, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
     except json.JSONDecodeError as exc:
         fail_data_error(f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}")
@@ -163,27 +174,38 @@ def load_data():
 
 def normalize(s):
     """Normalize string for robust fuzzy matching."""
-    s = s.lower().strip()
+    s = unicodedata.normalize("NFC", s.casefold()).strip()
     for pat in STRIP_PATTERNS:
         s = re.sub(pat, "", s)
-    s = re.sub(r"[^a-zæøåöäü0-9]", "", s)
-    return s.strip()
+    return "".join(
+        char for char in s
+        if char.isalnum() or unicodedata.category(char).startswith("M")
+    )
 
 
 def anglicize(s):
-    """Convert Danish/Nordic characters to anglicized equivalents."""
+    """Fold Nordic spellings first, then accents for ASCII-typed queries."""
     s = s.lower()
     for danish, english in SPELLING_VARIANTS.items():
         s = s.replace(danish, english)
-    return s
+    return "".join(
+        char for char in unicodedata.normalize("NFKD", s)
+        if not unicodedata.combining(char)
+    )
 
 
 def extract_core_words(s):
     """Extract meaningful words from a company name, ignoring noise."""
-    s = s.lower()
+    s = unicodedata.normalize("NFC", s.casefold())
     for pat in STRIP_PATTERNS:
         s = re.sub(pat, "", s)
-    words = re.findall(r"[a-zæøåöäü0-9]+", s)
+    # Keep the same identity as normalize(), including combining marks in
+    # scripts where NFC cannot compose them into a single letter.
+    s = "".join(
+        char if char.isalnum() or unicodedata.category(char).startswith("M") else " "
+        for char in s
+    )
+    words = s.split()
     return [w for w in words if len(w) > 1]
 
 
@@ -319,6 +341,7 @@ def format_entry(entry, metadata):
         lines.append(f"  {'Category':<22} {'Count':>6} {index_label:>8}  {'vs Baseline':>10}")
         lines.append(f"  {'-'*50}")
 
+        suppressed = False  # did any row render its index as N/A*?
         for label, data in categories.items():
             display_label = label.replace("_", " ").title()
             count = data.get("count")
@@ -336,12 +359,20 @@ def format_entry(entry, metadata):
                 elif index is not None:
                     index_str = str(index)
                     diff_str = ""
+                elif "index" not in data:
+                    index_str = "-"
+                    diff_str = ""
                 else:
                     index_str = "N/A*"
                     diff_str = ""
+                    suppressed = True
                 lines.append(f"  {display_label:<22} {count_str:>6} {index_str:>8}  {diff_str:>10}")
 
-        lines.append(f"\n  * N/A = Too few employees to publish (privacy)")
+        # The footnote explains the N/A* marker; printing it under a table with
+        # no such row asserts a privacy suppression that did not happen.
+        lines.append("")
+        if suppressed:
+            lines.append("  * N/A = Too few employees to publish (privacy)")
         if metadata.get("baseline_description"):
             lines.append(f"  {metadata['baseline_description']}")
         else:
@@ -379,7 +410,21 @@ def print_validation_report(errors, warnings):
     return 0
 
 
+def _force_utf8_output() -> None:
+    """Write UTF-8 whatever the host's default encoding is.
+
+    A piped stdout on Windows defaults to the ANSI code page (cp1252 on most
+    Western installs), so printing a company, title or file name outside it
+    raised UnicodeEncodeError before the workflow saw any output.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)  # absent on a StringIO under test
+        if reconfigure:
+            reconfigure(encoding="utf-8")
+
+
 def main():
+    _force_utf8_output()
     parser = argparse.ArgumentParser(description="Salary Benchmark Lookup")
     parser.add_argument("company", nargs="?", help="Company name to search for")
     parser.add_argument("--city", help="Filter by city name")

@@ -1,6 +1,6 @@
 import { defineCommand, option } from "@bunli/core"
 import { z } from "zod"
-import { apiPost, writeError, BASE_URL } from "../helpers.js"
+import { apiPost, writeError, stripInvisible, BASE_URL } from "../helpers.js"
 
 export interface ApiSearchItem {
   title: string
@@ -64,7 +64,7 @@ export function normalizeItem(item: ApiSearchItem): Record<string, unknown> {
   // payload and the /scrape agent can never use an image or overlay colour.
   // The #340 compatibility duplicates (companyName, publishedDate,
   // applicationDeadline) stay.
-  return {
+  return stripInvisible({
     title: item.title,
     companyName: item.companyName,
     companyAddress: item.companyAddress,
@@ -74,11 +74,15 @@ export function normalizeItem(item: ApiSearchItem): Record<string, unknown> {
     applicationDeadline: item.applicationDeadline ?? null,
     url: fullUrl,
     slug,
+    // /scrape contract aliases (add-portal.md: every result carries at least
+    // id, title, company, location, date, url). `id` is the slug - the value
+    // `detail` takes - under the name every other portal CLI uses.
+    id: slug,
     company: item.companyName,
     location: extractCity(item.companyAddress),
     date: toContractDate(item.publishedDate),
     deadline: toContractDate(item.applicationDeadline),
-  }
+  })
 }
 
 export const search = defineCommand({
@@ -101,7 +105,10 @@ export const search = defineCommand({
       description: "Zip code, e.g. 5000",
     }),
     region: option(z.string().optional(), {
-      description: "Region name",
+      description: "Landsdel from locations (category region), e.g. Sjælland, Østjylland",
+    }),
+    "administrative-region": option(z.string().optional(), {
+      description: "Administrative region from locations (category administrativeRegion), e.g. Region Midtjylland",
     }),
     "job-type": option(z.string().optional(), {
       description: "Comma-separated job types: fuldtid,deltid,fleksjob,elev,studiejob,praktik",
@@ -138,6 +145,12 @@ export const search = defineCommand({
     }
     if (flags.region) {
       filters.push({ type: "region", value: flags.region, displayText: flags.region })
+    }
+    // `locations` returns two kinds of region, and the API filters each by its
+    // own type: a "region" filter holding "Region Midtjylland" matches no job.
+    if (flags["administrative-region"]) {
+      const value = flags["administrative-region"]
+      filters.push({ type: "administrativeRegion", value, displayText: value })
     }
 
     const jobTypes = flags["job-type"]

@@ -1,6 +1,6 @@
 import { defineCommand, option } from "@bunli/core"
 import { z } from "zod"
-import { apiFetch, writeError } from "../helpers.js"
+import { apiFetch, stripInvisible, writeError } from "../helpers.js"
 
 export interface SearchApiResponse {
   jobAds: JobAdRaw[]
@@ -27,6 +27,7 @@ export interface JobAdRaw {
   applicationDeadlineStatus: string | null
   workHourPartTime: boolean
   isExternal: boolean
+  jobAdUrl?: string | null
   hasLogo: boolean
   logoUrl: string | null
   cvr: string | null
@@ -58,6 +59,7 @@ export interface SearchFlags {
   radius: number
   "occupation-area"?: string
   "occupation-group"?: string
+  occupation?: string
   limit?: number
 }
 
@@ -79,39 +81,80 @@ export function buildSearchParams(flags: SearchFlags): Record<string, string> {
   }
   if (flags["occupation-area"]) params["occupationAreas"] = flags["occupation-area"]
   if (flags["occupation-group"]) params["occupationGroups"] = flags["occupation-group"]
+  if (flags.occupation) params["occupations"] = occupationId(flags.occupation)
 
   return params
 }
 
+/**
+ * The search API filters one ESCO occupation by the UUID that ends the
+ * `conceptUriDa` printed by `occupations`. Accept that full URI as well as the
+ * bare UUID, so the value can be copied from either output unchanged.
+ */
+export function occupationId(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "")
+  return trimmed.slice(trimmed.lastIndexOf("/") + 1)
+}
+
+/**
+ * Return the destination URL for an external ad, if it has a valid http(s)
+ * jobAdUrl. Only an absolute http(s) URL is used: the value is employer-supplied
+ * and downstream steps fetch it. Emitted in `applyUrl` (and `jobAdUrl`); `url`
+ * always keeps the canonical jobnet.dk route across all postings. Anything
+ * else returns null.
+ */
+export function externalAdUrl(job: Pick<JobAdRaw, "isExternal" | "jobAdUrl">): string | null {
+  const raw = job.jobAdUrl?.trim()
+  if (!job.isExternal || !raw) return null
+  try {
+    const { protocol } = new URL(raw)
+    return protocol === "https:" || protocol === "http:" ? raw : null
+  } catch {
+    return null
+  }
+}
+
 export function createSearchOutput(data: SearchApiResponse, flags: SearchFlags) {
-  let results = data.jobAds.map((job) => ({
-    jobAdId: job.jobAdId,
-    title: job.title,
-    hiringOrgName: job.hiringOrgName,
-    occupation: job.occupation ?? null,
-    municipality: job.municipality ?? null,
-    postalCode: job.postalCode ?? null,
-    postalDistrictName: job.postalDistrictName ?? null,
-    country: job.country,
-    publicationDate: job.publicationDate,
-    applicationDeadline: job.applicationDeadline ?? null,
-    applicationDeadlineStatus: job.applicationDeadlineStatus ?? null,
-    workHourPartTime: job.workHourPartTime,
-    isExternal: job.isExternal,
-    hasLogo: job.hasLogo,
-    logoUrl: job.logoUrl ?? null,
-    cvr: job.cvr ?? null,
-    workPlaceAddress: job.workPlaceAddress ?? "",
-    isSeen: job.isSeen,
-    isFavorite: job.isFavorite,
-    company: job.hiringOrgName,
-    location: job.postalDistrictName ?? job.municipality ?? null,
-    date: job.publicationDate ? job.publicationDate.slice(0, 10) : null,
-    deadline: job.applicationDeadline && !job.applicationDeadline.startsWith("1900-01-01")
-      ? job.applicationDeadline.slice(0, 10)
-      : null,
-    url: `https://jobnet.dk/find-job/${job.jobAdId}`,
-  }))
+  let results = data.jobAds.map((job) => {
+    const destination = externalAdUrl(job)
+    return {
+      jobAdId: job.jobAdId,
+      title: job.title,
+      hiringOrgName: job.hiringOrgName,
+      occupation: job.occupation ?? null,
+      municipality: job.municipality ?? null,
+      postalCode: job.postalCode ?? null,
+      postalDistrictName: job.postalDistrictName ?? null,
+      country: job.country,
+      publicationDate: job.publicationDate,
+      applicationDeadline: job.applicationDeadline ?? null,
+      applicationDeadlineStatus: job.applicationDeadlineStatus ?? null,
+      workHourPartTime: job.workHourPartTime,
+      isExternal: job.isExternal,
+      jobAdUrl: destination,
+      hasLogo: job.hasLogo,
+      logoUrl: job.logoUrl ?? null,
+      cvr: job.cvr ?? null,
+      workPlaceAddress: job.workPlaceAddress ?? "",
+      isSeen: job.isSeen,
+      isFavorite: job.isFavorite,
+      // /scrape contract aliases (add-portal.md: every result carries at least
+      // id, title, company, location, date, url). `id` is the jobAdId - the
+      // value `detail` takes - under the name every other portal CLI uses.
+      // `url` stays canonical on jobnet.dk for all postings (internal and external)
+      // so deduplication, health checks, and /apply host routing (#562) identify
+      // the portal correctly; external ATS destinations are emitted as `applyUrl`.
+      id: job.jobAdId,
+      company: job.hiringOrgName,
+      location: job.postalDistrictName ?? job.municipality ?? null,
+      date: job.publicationDate ? job.publicationDate.slice(0, 10) : null,
+      deadline: job.applicationDeadline && !job.applicationDeadline.startsWith("1900-01-01")
+        ? job.applicationDeadline.slice(0, 10)
+        : null,
+      url: `https://jobnet.dk/find-job/${job.jobAdId}`,
+      applyUrl: destination,
+    }
+  })
 
   if (flags.limit !== undefined) {
     results = results.slice(0, flags.limit)
@@ -132,7 +175,7 @@ export function createSearchOutput(data: SearchApiResponse, flags: SearchFlags) 
     searchString: data.searchString ?? null,
   }
 
-  return { meta, facets, results }
+  return stripInvisible({ meta, facets, results })
 }
 
 export const search = defineCommand({
@@ -174,6 +217,9 @@ export const search = defineCommand({
     }),
     "occupation-group": option(z.string().optional(), {
       description: "Occupation group identifier, e.g. 10060",
+    }),
+    occupation: option(z.string().optional(), {
+      description: "ESCO occupation UUID or conceptUriDa from the occupations command",
     }),
     limit: option(z.coerce.number().int().min(1).optional(), {
       description: "Cap total results returned by CLI",

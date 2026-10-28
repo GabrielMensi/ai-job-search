@@ -26,6 +26,7 @@ with paired count/index columns per category, it groups them automatically.
 """
 
 import json
+import math
 import sys
 import argparse
 import re
@@ -46,22 +47,36 @@ INDEX_PATTERNS = {"indeks", "index", "idx", "salary", "løn", "median", "average
 # header token, for languages that glue words together (e.g. Danish "lønindeks"
 # -> løn + indeks). Languages that write headers as separate words need none.
 # Ships populated for this repo's Danish demonstration data; a fork targeting
-# another locale edits this constant.
-COMPOUND_PATTERNS = {"antal", "indeks", "løn", "gennemsnit", "medarbejdere"}
+# another locale edits this constant. "firma" is here because the IDA workbook
+# heads its company column "Firmanavn og by" (firma + navn glued together).
+COMPOUND_PATTERNS = {"firma", "antal", "indeks", "løn", "gennemsnit", "medarbejdere"}
 # Identifier columns (employee id, Danish "personnummer", etc.) are never salary
 # data. They are dropped at classification so they are not mistaken for a salary
 # category. Matched as whole tokens only, like other pattern sets.
 ID_PATTERNS = {"id", "personnummer"}
+# Category name for a count/index pair whose headers carry no category word at
+# all ("Count" + "Index"). Matches the top-level category in README_SALARY_TOOL.md.
+DEFAULT_CATEGORY = "all_employees"
+
+
+def _finite_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("salary values must be finite")
+    return number
 
 
 def parse_numeric_cell(value):
     """Parse numeric Excel values, including localized string cells."""
+    if isinstance(value, bool):
+        raise ValueError("not numeric")
     if isinstance(value, (int, float)):
-        return float(value)
+        return _finite_float(value)
     if not isinstance(value, str):
         raise ValueError("not numeric")
 
-    text = value.strip().replace("\u00a0", " ").replace(" ", "")
+    # Localized exports also use narrow no-break and thin spaces for grouping.
+    text = "".join(value.split())
     if not text:
         raise ValueError("not numeric")
     if "," in text and "." in text:
@@ -79,7 +94,7 @@ def parse_numeric_cell(value):
     elif "." in text:
         if re.fullmatch(r"[+-]?\d+\.\d{3}", text):
             raise ValueError("ambiguous dot separator")
-    return float(text)
+    return _finite_float(text)
 
 
 def header_matches(header, patterns):
@@ -149,6 +164,7 @@ def parse_sheet(ws, sheet_label=None):
         return [str(cell.value).strip() for cell in row if cell.value]
 
     header_row = None
+    corroborated = True
     for row_idx, row in enumerate(rows, start=1):
         cell_texts = _cell_texts(row)
         company_idxs = {i for i, t in enumerate(cell_texts) if header_matches(t, COMPANY_PATTERNS)}
@@ -164,6 +180,7 @@ def parse_sheet(ws, sheet_label=None):
             break
 
     if header_row is None:
+        corroborated = False
         for row_idx, row in enumerate(rows, start=1):
             if any(header_matches(t, COMPANY_PATTERNS) for t in _cell_texts(row)):
                 header_row = row_idx
@@ -173,19 +190,35 @@ def parse_sheet(ws, sheet_label=None):
         print(f"Warning: Could not find header row in sheet '{ws.title}'. Skipping.", file=sys.stderr)
         return []
 
-    # Read headers
+    # Read headers. Wrapped header cells carry a line break ("Median\nsalary"),
+    # which would survive into the category name and keep the column from
+    # pairing with its count, so collapse every whitespace run to one space.
     headers = []
     for cell in ws[header_row]:
-        headers.append(str(cell.value).strip() if cell.value else "")
+        headers.append(" ".join(str(cell.value).split()) if cell.value else "")
 
-    # Find company and city columns
-    company_col = None
-    city_col = None
-    for i, h in enumerate(headers):
-        if header_matches(h, COMPANY_PATTERNS):
-            company_col = i
-        elif header_matches(h, CITY_PATTERNS):
-            city_col = i
+    # Find company and city columns. Three tiers, each taking the FIRST match:
+    #   1. an exact pattern header ("Company", "Firma", "By");
+    #   2. a header that carries the pattern but is not a count/index column
+    #      ("Company Name", "Firmanavn og by");
+    #   3. any header carrying the pattern.
+    # The old loop kept the LAST pattern match, so "Company Name | ... |
+    # Company Index" made the salary index the company column: every row's
+    # company read "108.5". #571 added tier 1; tiers 2-3 cover a qualified
+    # name header that sits next to a qualified salary header. The city
+    # lookup skips the company column: a combined "Company and city" header
+    # carries both words, and must not shadow a real city column after it.
+    def metadata_column(patterns, skip=None):
+        usable = [(i, h) for i, h in enumerate(headers) if i != skip]
+        exact = next((i for i, h in usable if h.lower().strip() in patterns), None)
+        if exact is not None:
+            return exact
+        candidates = [i for i, h in usable if header_matches(h, patterns)]
+        plain = [i for i in candidates if detect_column_type(headers[i]) is None]
+        return (plain or candidates or [None])[0]
+
+    company_col = metadata_column(COMPANY_PATTERNS)
+    city_col = metadata_column(CITY_PATTERNS, skip=company_col)
 
     if company_col is None:
         print(f"Warning: Could not find company column in sheet '{ws.title}'.", file=sys.stderr)
@@ -216,7 +249,14 @@ def parse_sheet(ws, sheet_label=None):
         else:
             untyped_cols.append((col_idx, col_header))
 
-    # Pair count/index columns by matching category name
+    # Pair count/index columns by matching category name. A bare "Count" /
+    # "Index" pair (Danish "Antal" / "Lønindeks") strips to an empty name on
+    # both sides - the single-category layout the README's "auto-pairs
+    # count/index columns" line describes. It is still one pair, so it gets
+    # the README's default category name instead of being emitted as two
+    # unrelated standalone columns: salary_lookup renders that split as a
+    # count row whose index reads "N/A*", i.e. "too few employees to publish
+    # (privacy)", about a company with a published headcount.
     categories = []
     used_counts = set()
     used_indexes = set()
@@ -225,8 +265,8 @@ def parse_sheet(ws, sheet_label=None):
         for ii, (i_idx, i_header, i_cat) in enumerate(index_cols):
             if ii in used_indexes:
                 continue
-            if c_cat and i_cat and c_cat == i_cat:
-                cat_name = c_cat.replace(" ", "_").replace("-", "_")
+            if c_cat == i_cat:
+                cat_name = (c_cat or DEFAULT_CATEGORY).replace(" ", "_").replace("-", "_")
                 categories.append({
                     "name": cat_name,
                     "count_col": c_idx,
@@ -254,6 +294,18 @@ def parse_sheet(ws, sheet_label=None):
     for col_idx, col_header in untyped_cols:
         categories.append({"name": col_header.lower().replace(" ", "_"), "value_col": col_idx})
 
+    if not categories and not corroborated:
+        # The fallback pass matched a lone company word and no salary column
+        # sits beside it: this is prose (a "Notes" or "About the data" tab
+        # mentioning "company"), not a table. Reading it would turn every
+        # sentence below that line into a company entry.
+        print(
+            f"Warning: Skipping sheet '{ws.title}': no table header found "
+            "(a company word appears only in text, with no salary columns).",
+            file=sys.stderr,
+        )
+        return []
+
     if not categories:
         print(
             f"Warning: No salary data columns detected in sheet '{ws.title}' "
@@ -269,6 +321,8 @@ def parse_sheet(ws, sheet_label=None):
             continue
 
         company_name = str(row[company_col]).strip()
+        if not company_name:
+            continue
         if city_col is not None and city_col < len(row) and row[city_col]:
             city_name = str(row[city_col]).strip()
         else:
@@ -317,7 +371,21 @@ def parse_sheet(ws, sheet_label=None):
     return companies
 
 
+def _force_utf8_output() -> None:
+    """Write UTF-8 whatever the host's default encoding is.
+
+    A piped stdout on Windows defaults to the ANSI code page (cp1252 on most
+    Western installs), so printing a company, title or file name outside it
+    raised UnicodeEncodeError before the workflow saw any output.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)  # absent on a StringIO under test
+        if reconfigure:
+            reconfigure(encoding="utf-8")
+
+
 def main():
+    _force_utf8_output()
     parser = argparse.ArgumentParser(
         description="Convert salary Excel data to JSON"
     )
@@ -340,6 +408,9 @@ def main():
     )
     args = parser.parse_args()
 
+    if not math.isfinite(args.baseline):
+        parser.error("--baseline must be a finite number")
+
     excel_path = Path(args.excel_file)
     if not excel_path.exists():
         print(f"Error: File not found: {excel_path}", file=sys.stderr)
@@ -355,10 +426,9 @@ def main():
     wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
 
     all_companies = []
-    for sheet_name in wb.sheetnames:
-        print(f"  Parsing sheet: {sheet_name}")
-        ws = wb[sheet_name]
-        companies = parse_sheet(ws, sheet_label=sheet_name)
+    for ws in wb.worksheets:
+        print(f"  Parsing sheet: {ws.title}")
+        companies = parse_sheet(ws, sheet_label=ws.title)
         all_companies.extend(companies)
 
     wb.close()
